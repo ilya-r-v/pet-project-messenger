@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { AuthService } from '../services/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-home',
@@ -9,7 +10,13 @@ import { AuthService } from '../services/auth.service';
   styleUrl: './home.component.scss',
 })
 export class HomeComponent {
-  constructor (private authService: AuthService) {}
+  constructor (
+    private authService: AuthService,
+    private router: Router,
+  ) {}
 
-  logout() { this.authService.logout(); }
+  logout() {
+    this.authService.logout(); 
+    this.router.navigate(['/auth']);
+  }
 }
