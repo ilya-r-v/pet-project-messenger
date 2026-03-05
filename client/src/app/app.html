@@ -1,23 +1,34 @@
-<div class="auth">
-  <div class="auth-window">
-    <h4>Личный кабинет</h4>
+@if (authService.isAuthenticated$ | async) {
+    <app-home></app-home>
+} @else {
+    <ng-container *ngTemplateOutlet="authBlock"></ng-container>
+}
 
-    <app-login *ngIf="activeForm === 'login'"></app-login>
-    <app-register *ngIf="activeForm === 'register'"></app-register>
+<ng-template #authBlock>
+    <div class="auth">
+    <div class="auth-window">
+        <h4>Личный кабинет</h4>
 
-    <div class="switch-buttons">
-      <button 
-        class="switch-btn" 
-        [class.active]="activeForm === 'login'"
-        (click)="showLogin()">
-        Вход
-      </button>
-      <button 
-        class="switch-btn" 
-        [class.active]="activeForm === 'register'"
-        (click)="showRegister()">
-        Регистрация
-      </button>
+        @if (activeForm === 'login') {
+            <app-login></app-login>
+        } @else {
+            <app-register></app-register>
+        }
+
+        <div class="switch-buttons">
+        <button 
+            class="switch-btn" 
+            [class.active]="activeForm === 'login'"
+            (click)="showLogin()">
+            Вход
+        </button>
+        <button 
+            class="switch-btn" 
+            [class.active]="activeForm === 'register'"
+            (click)="showRegister()">
+            Регистрация
+        </button>
+        </div>
     </div>
-  </div>
-</div>
+    </div>
+</ng-template>
