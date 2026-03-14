@@ -1,25 +1,28 @@
-import { Injectable } from "@nestjs/common";
-
-
-export type User = {
-    userId: number;
-    username: string;
-    password: string;
-}
+import { Injectable } from '@nestjs/common';
+import { User } from './entities/user.entity';
+import { nanoid } from 'nanoid';
 
 @Injectable()
+export class UsersService {
+  private users: User[] = [];
 
-export class UserService {
-    private readonly user: User[] = [
-        {
-            userId: 1,
-            username: 'ilya',
-            password:  ''
-        },
-    ];
+  async create(email: string, firstName: string, lastName: string, passwordHash: string): Promise<User> {
+    const user: User = {
+      id: nanoid(),
+      email,
+      firstName,
+      lastName,
+      password: passwordHash,
+    };
+    this.users.push(user);
+    return user;
+  }
 
+  findByEmail(email: string): User | undefined {
+    return this.users.find(u => u.email === email);
+  }
 
-    async findOne(username: string): Promise<User | undefined> {
-        return this.user.find(user => user.username === username);
-    }
+  findById(id: string): User | undefined {
+    return this.users.find(u => u.id === id);
+  }
 }

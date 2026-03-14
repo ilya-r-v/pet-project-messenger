@@ -1,0 +1,21 @@
+@use '../../../styles.scss' as vars;
+
+.register-container {
+  max-width: 400px;
+  margin: 3rem auto;
+  padding: 2rem;
+  background: white;
+  border: 1px solid vars.$border-color;
+  border-radius: vars.$border-radius;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  h2 {
+    margin-top: 0;
+    text-align: center;
+  }
+
+  p {
+    text-align: center;
+    margin-top: 1.5rem;
+  }
+}
