@@ -14,7 +14,7 @@ import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class AuthService {
-  // TODO (Фаза 2): перенести refresh-токены в Redis или таблицу БД.
+  // TODO: перенести refresh-токены в Redis или таблицу БД.
   private refreshTokens = new Set<string>();
 
   constructor(
@@ -111,7 +111,7 @@ export class AuthService {
       if (!user) {
         throw new UnauthorizedException('User not found');
       }
-      
+
       this.refreshTokens.delete(refreshToken);
 
       const newPayload = { sub: user.id, email: user.email };
