@@ -14,6 +14,7 @@ import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class AuthService {
+  // TODO (Фаза 2): перенести refresh-токены в Redis или таблицу БД.
   private refreshTokens = new Set<string>();
 
   constructor(
@@ -24,35 +25,36 @@ export class AuthService {
 
   private getJwtSecret(): string {
     const secret = this.configService.get<string>('JWT_SECRET');
-    if (!secret) {
-      throw new Error('JWT_SECRET is not defined');
-    }
+    if (!secret) throw new Error('JWT_SECRET is not defined');
     return secret;
   }
 
   private getRefreshSecret(): string {
     const secret = this.configService.get<string>('REFRESH_SECRET');
-    if (!secret) {
-      throw new Error('REFRESH_SECRET is not defined');
-    }
+    if (!secret) throw new Error('REFRESH_SECRET is not defined');
     return secret;
   }
 
   private getAccessExpiresIn(): string {
-    return this.configService.get<string>('ACCESS_EXPIRES_IN') || '15m';
+    return this.configService.get<string>('ACCESS_EXPIRES_IN') ?? '15m';
   }
 
   private getRefreshExpiresIn(): string {
-    return this.configService.get<string>('REFRESH_EXPIRES_IN') || '7d';
+    return this.configService.get<string>('REFRESH_EXPIRES_IN') ?? '7d';
   }
 
-  async validateUser(email: string, password: string): Promise<Omit<User, 'password'> | null> {
-    const user = this.usersService.findByEmail(email);
-    if (user && (await bcrypt.compare(password, user.password))) {
-      const { password, ...result } = user;
-      return result;
-    }
-    return null;
+  async validateUser(
+    email: string,
+    password: string,
+  ): Promise<Omit<User, 'password'> | null> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) return null;
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return null;
+
+    const { password: _, ...result } = user;
+    return result;
   }
 
   async register(registerDto: RegisterDto): Promise<Omit<User, 'password'>> {
@@ -64,17 +66,25 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await this.usersService.create(email, firstName, lastName, hashedPassword);
+    const user = await this.usersService.create({
+      email,
+      firstName,
+      lastName,
+      password: hashedPassword,
+    });
+
     const { password: _, ...result } = user;
     return result;
   }
 
   async login(user: Omit<User, 'password'>): Promise<AuthResponse> {
     const payload = { sub: user.id, email: user.email };
+
     const accessToken = this.jwtService.sign(payload, {
       secret: this.getJwtSecret(),
       expiresIn: this.getAccessExpiresIn() as any,
     });
+
     const refreshToken = this.jwtService.sign(
       { sub: user.id },
       {
@@ -82,6 +92,7 @@ export class AuthService {
         expiresIn: this.getRefreshExpiresIn() as any,
       },
     );
+
     this.refreshTokens.add(refreshToken);
     return { accessToken, refreshToken };
   }
@@ -95,11 +106,12 @@ export class AuthService {
       const payload = this.jwtService.verify(refreshToken, {
         secret: this.getRefreshSecret(),
       });
+
       const user = await this.usersService.findById(payload.sub);
       if (!user) {
         throw new UnauthorizedException('User not found');
       }
-
+      
       this.refreshTokens.delete(refreshToken);
 
       const newPayload = { sub: user.id, email: user.email };
@@ -114,8 +126,8 @@ export class AuthService {
           expiresIn: this.getRefreshExpiresIn() as any,
         },
       );
-      this.refreshTokens.add(newRefreshToken);
 
+      this.refreshTokens.add(newRefreshToken);
       return { accessToken: newAccessToken, refreshToken: newRefreshToken };
     } catch {
       throw new UnauthorizedException('Invalid or expired refresh token');
@@ -123,11 +135,11 @@ export class AuthService {
   }
 
   async me(userId: string): Promise<Omit<User, 'password'>> {
-    const user = this.usersService.findById(userId);
+    const user = await this.usersService.findById(userId);
     if (!user) {
       throw new NotFoundException('Пользователь не найден');
     }
-    const { password, ...result } = user;
+    const { password: _, ...result } = user;
     return result;
   }
 }
