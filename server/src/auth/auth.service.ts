@@ -58,7 +58,7 @@ export class AuthService {
   async register(registerDto: RegisterDto): Promise<Omit<User, 'password'>> {
     const { email, firstName, lastName, password } = registerDto;
 
-    const existing = this.usersService.findByEmail(email);
+    const existing = await this.usersService.findByEmail(email);
     if (existing) {
       throw new BadRequestException('Пользователь с таким email уже существует');
     }
@@ -73,7 +73,7 @@ export class AuthService {
     const payload = { sub: user.id, email: user.email };
     const accessToken = this.jwtService.sign(payload, {
       secret: this.getJwtSecret(),
-      expiresIn: this.getAccessExpiresIn() as any, // Приведение типа
+      expiresIn: this.getAccessExpiresIn() as any,
     });
     const refreshToken = this.jwtService.sign(
       { sub: user.id },
@@ -95,7 +95,7 @@ export class AuthService {
       const payload = this.jwtService.verify(refreshToken, {
         secret: this.getRefreshSecret(),
       });
-      const user = this.usersService.findById(payload.sub);
+      const user = await this.usersService.findById(payload.sub);
       if (!user) {
         throw new UnauthorizedException('User not found');
       }
