@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AuthResponse, User } from '../../models/user.model';
+import { Chat, Message } from '../../models/chat.model';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -23,6 +24,22 @@ export class ApiService {
 
     getMe(): Observable<User> {
         return this.http.get<User>(`${this.baseUrl}/auth/me`);
+    }
+
+    getChats(): Observable<Chat[]> {
+        return this.http.get<Chat[]>(`${this.baseUrl}/chat`);
+    }
+
+    createDirect(targetUserId: string): Observable<Chat> {
+        return this.http.post<Chat>(`${this.baseUrl}/chat/direct`, {targetUserId});
+    }
+
+    createGroup(data: {name: string, memberIds: string[]}): Observable<Chat> {
+        return this.http.post<Chat>(`${this.baseUrl}/chat/group`, data);
+    }
+
+    getMessages(id: Chat["id"]): Observable<Message[]> {
+        return this.http.get<Message[]>(`${this.baseUrl}/${id}/messages`)
     }
 
 }
