@@ -23,4 +23,8 @@ export class ChatService{
     getMessages(id: Chat["id"]): Observable<Message[]> {
         return this.apiService.getMessages(id);
     }
+
+    deleteChat(chatId: string): Observable<void> {
+        return this.apiService.deleteChat(chatId);
+    }
 }

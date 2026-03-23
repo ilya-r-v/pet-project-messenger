@@ -49,6 +49,7 @@ export class ChatService {
 
     const chat = this.chatRepository.create({
       type: ChatType.DIRECT,
+      name: `${user.firstName} & ${target.firstName}`,
       participants: [user, target],
     });
 
@@ -131,5 +132,14 @@ export class ChatService {
 
     // TODO [Фаза 2]: после обновления — уведомить отправителя через WS
     // что его сообщения прочитаны (emit 'messagesRead' в комнату)
+  }
+
+  async deleteChat(chatId: string, userId: string): Promise<void> {
+    const isParticipant = await this.isParticipant(chatId, userId);
+    if (!isParticipant) {
+      throw new ForbiddenException('Вы не участник этого чата');
+    }
+
+    await this.chatRepository.delete(chatId);
   }
 }

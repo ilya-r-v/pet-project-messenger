@@ -1,1 +1,14 @@
 <div>Ты авторизовался</div>
+<ul>
+    @for (chat of chats; track chat.id) {
+        <li>{{chat.name}}</li>
+        <button (click)="deleteChat(chat.id)">Удалить</button>
+    }   
+</ul>
+
+<input 
+  type="text" 
+  [(ngModel)]="targetUserId" 
+  placeholder="ID пользователя"
+/>
+<button (click)="createChat()">Создать чат</button>

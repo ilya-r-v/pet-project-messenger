@@ -42,4 +42,7 @@ export class ApiService {
         return this.http.get<Message[]>(`${this.baseUrl}/${id}/messages`)
     }
 
+    deleteChat(chatId: string): Observable<void> {
+        return this.http.delete<void>(`${this.baseUrl}/chat/${chatId}`);
+    }
 }

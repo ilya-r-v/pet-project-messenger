@@ -7,6 +7,7 @@ import {
   Query,
   UseGuards,
   Request,
+  Delete,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -54,5 +55,14 @@ export class ChatController {
     @Query('limit') limit?: number,
   ) {
     return this.chatService.getMessages(chatId, req.user.id, limit, cursor);
+  }
+
+  @Delete(':chatId')
+  @ApiOperation({ summary: 'Удалить чат' })
+  deleteChat(
+    @Request() req: { user: { id: string } },
+    @Param('chatId') chatId: string,
+  ) {
+    return this.chatService.deleteChat(chatId, req.user.id);
   }
 }
