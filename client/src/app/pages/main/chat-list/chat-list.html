@@ -1,1 +1,56 @@
-<p>chat-list works!</p>
+<div class="chat-list">
+
+  <div class="chat-list__header">
+    <span class="chat-list__title">Чаты</span>
+    <button class="chat-list__add-btn" (click)="toggleForm()">
+      {{ showForm ? '✕' : '+' }}
+    </button>
+  </div>
+
+  @if (showForm) {
+    <div class="chat-list__form">
+      <input
+        class="chat-list__input"
+        type="text"
+        placeholder="ID пользователя"
+        [(ngModel)]="newChatUserId"
+        (keyup.enter)="createChat()"
+      />
+      <button class="chat-list__submit-btn" (click)="createChat()">
+        Создать
+      </button>
+      @if (errorMessage) {
+        <p class="chat-list__error">{{ errorMessage }}</p>
+      }
+    </div>
+  }
+  <ul class="chat-list__items">
+    @for (chat of chats; track chat.id) {
+      <li
+        class="chat-list__item"
+        [class.chat-list__item--active]="chat.id === activeChatId"
+        (click)="selectChat(chat.id)"
+      >
+        <div class="chat-list__item-avatar">
+          {{ chat.name?.charAt(0) ?? '?' }}
+        </div>
+
+        <div class="chat-list__item-info">
+          <div class="chat-list__item-name">{{ chat.name }}</div>
+          <div class="chat-list__item-preview">{{ getLastMessage(chat) }}</div>
+        </div>
+
+        <button
+          class="chat-list__delete-btn"
+          (click)="deleteChat($event, chat.id)"
+          title="Удалить чат"
+        >
+          🗑
+        </button>
+      </li>
+    } @empty {
+      <li class="chat-list__empty">Чатов пока нет</li>
+    }
+  </ul>
+
+</div>

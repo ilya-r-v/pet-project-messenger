@@ -1,20 +1,22 @@
-<div>Ты авторизовался</div>
-<ul>
-    @for (chat of chats; track chat.id) {
-        <li>
-            {{chat.name}}
-            <button (click)="deleteChat(chat.id)">Удалить</button>
-        </li>
-    }   
-</ul>
+<div class="messenger">
+  <app-chat-list
+    [chats]="chats"
+    [activeChatId]="activeChatId"
+    (chatSelected)="onChatSelect($event)"
+    (chatDeleted)="onChatDelete($event)"
+    (chatCreated)="onChatCreated($event)"
+  />
 
-<input 
-  type="text" 
-  [(ngModel)]="targetUserId" 
-  placeholder="ID пользователя"
-/>
-<button (click)="createChat()">Создать чат</button>
+  @if (activeChatId && currentUser) {
+    <app-chat-window
+      [chatId]="activeChatId"
+      [chatName]="activeChat?.name ?? ''"
+      [currentUserId]="currentUser.id"
+    />
+  } @else {
+    <div class="messenger__empty">
+      <p>Выбери чат чтобы начать общение</p>
+    </div>
+  }
 
-<input [(ngModel)]="formForGroup.name" placeholder="Название группы"/>
-<input [(ngModel)]="formForGroup.memberIds" placeholder="ID через запятую"/>
-<button (click)="createGroup()">Создать группу</button>
+</div>

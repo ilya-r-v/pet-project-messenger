@@ -1,1 +1,61 @@
-<p>chat-window works!</p>
+<div class="chat-window">
+
+  <div class="chat-window__header">
+    <span class="chat-window__name">{{ chatName }}</span>
+  </div>
+
+  <div class="chat-window__messages">
+    @for (msg of messages; track msg.id) {
+      <div
+        class="message"
+        [class.message--mine]="isMyMessage(msg)"
+        [class.message--theirs]="!isMyMessage(msg)"
+      >
+        <div class="message__bubble">
+          <p class="message__text">{{ msg.content }}</p>
+          <span class="message__time">
+            {{ msg.createdAt | date: 'HH:mm' }}
+          </span>
+          @if (isMyMessage(msg)) {
+            <span class="message__status">
+              {{ msg.isRead ? '✓✓' : '✓' }}
+            </span>
+          }
+        </div>
+      </div>
+    } @empty {
+      <p class="chat-window__empty">Нет сообщений. Напиши первым!</p>
+    }
+
+    @if (typingText) {
+      <div class="message message--theirs">
+        <div class="message__bubble message__bubble--typing">
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+        </div>
+      </div>
+    }
+
+    <div #messagesEnd></div>
+  </div>
+
+  <div class="chat-window__footer">
+    <input
+      class="chat-window__input"
+      type="text"
+      placeholder="Написать сообщение..."
+      [(ngModel)]="newMessage"
+      (input)="onInput()"
+      (keyup.enter)="sendMessage()"
+    />
+    <button
+      class="chat-window__send-btn"
+      (click)="sendMessage()"
+      [disabled]="!newMessage.trim()"
+    >
+      ➤
+    </button>
+  </div>
+
+</div>

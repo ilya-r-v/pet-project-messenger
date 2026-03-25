@@ -1,19 +1,20 @@
+import { Data } from "@angular/router";
 import { User } from "./user.model";
 
 export interface Chat {
-    id: string;
-    name: string;
-    type: string;
-    participants: User[];
-    messages: Message[];
+  id: string;
+  type: 'direct' | 'group';
+  name?: string;
+  participants: User[];
+  messages: Message[];
+  createdAt: string;
 }
 
 export interface Message {
-    id: string;
-    content: string;
-    chatId: string;
-    senderId: string;
-    chat: Chat;
-    sender: User;
-    isRead: boolean;
+  id: string;
+  chatId: string;
+  senderId: string;
+  content: string;
+  isRead: boolean;
+  createdAt: string;
 }
