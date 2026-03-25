@@ -11,12 +11,15 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './main.component.html',
 })
 export class MainComponent implements OnInit {
-  targetUserId = '';
+  
   constructor(
     private chatService: ChatService,
   ) {}
 
   chats: Chat[] = [];
+
+  targetUserId = '';
+  formForGroup = { name: '', memberIds: '' };
 
   ngOnInit(): void {
     this.loadChats()
@@ -37,6 +40,18 @@ export class MainComponent implements OnInit {
         this.loadChats();
       },
       error: (err) => console.error('Ошибка', err)
+    })
+  }
+
+  createGroup() {
+    const memberIds = this.formForGroup.memberIds.split(',').map(id => id.trim());
+
+    this.chatService.createGroup({name: this.formForGroup.name, memberIds}).subscribe({
+      next: (chat) => {
+        this.loadChats();
+        console.log('Группа создана:', chat );
+      },
+      error: (err) => console.log("Ошибка:", err)
     })
   }
 

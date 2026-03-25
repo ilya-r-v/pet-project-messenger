@@ -1,8 +1,10 @@
 <div>Ты авторизовался</div>
 <ul>
     @for (chat of chats; track chat.id) {
-        <li>{{chat.name}}</li>
-        <button (click)="deleteChat(chat.id)">Удалить</button>
+        <li>
+            {{chat.name}}
+            <button (click)="deleteChat(chat.id)">Удалить</button>
+        </li>
     }   
 </ul>
 
@@ -12,3 +14,7 @@
   placeholder="ID пользователя"
 />
 <button (click)="createChat()">Создать чат</button>
+
+<input [(ngModel)]="formForGroup.name" placeholder="Название группы"/>
+<input [(ngModel)]="formForGroup.memberIds" placeholder="ID через запятую"/>
+<button (click)="createGroup()">Создать группу</button>
