@@ -4,6 +4,7 @@ import { io, Socket } from 'socket.io-client';
 import { AuthService } from './auth.service';
 import { Message } from '../../models/chat.model';
 import { ChatService } from './chat.service';
+import { BehaviorSubject } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class SocketService implements OnDestroy {
@@ -12,6 +13,9 @@ export class SocketService implements OnDestroy {
 
   private lastMessageId: string | null = null;
   private activeChatId: string | null = null;
+
+  private onlineUsersSubject = new BehaviorSubject<string[]>([]);
+  public onlineUsers$ = this.onlineUsersSubject.asObservable();
 
   private messageSubject = new Subject<Message>();
 

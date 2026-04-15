@@ -2,6 +2,7 @@
   <app-chat-list
     [chats]="chats"
     [activeChatId]="activeChatId"
+    [currentUserId]="currentUser?.id ?? ''"
     (chatSelected)="onChatSelect($event)"
     (chatDeleted)="onChatDelete($event)"
     (chatCreated)="onChatCreated($event)"
@@ -15,8 +16,7 @@
     />
   } @else {
     <div class="messenger__empty">
-      <p>Выбери чат чтобы начать общение</p>
+      <p>Выбери чат, чтобы начать общение</p>
     </div>
   }
-
 </div>

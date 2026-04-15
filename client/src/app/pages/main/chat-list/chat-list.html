@@ -1,5 +1,4 @@
 <div class="chat-list">
-
   <div class="chat-list__header">
     <span class="chat-list__title">Чаты</span>
     <button class="chat-list__add-btn" (click)="toggleForm()">
@@ -24,6 +23,7 @@
       }
     </div>
   }
+
   <ul class="chat-list__items">
     @for (chat of chats; track chat.id) {
       <li
@@ -33,11 +33,32 @@
       >
         <div class="chat-list__item-avatar">
           {{ chat.name?.charAt(0) ?? '?' }}
+          
+          @if (chat.unreadCount && chat.unreadCount > 0) {
+            <span class="chat-list__unread-badge">{{ chat.unreadCount }}</span>
+          }
         </div>
 
         <div class="chat-list__item-info">
-          <div class="chat-list__item-name">{{ chat.name }}</div>
-          <div class="chat-list__item-preview">{{ getLastMessage(chat) }}</div>
+          <div class="chat-list__item-header">
+            <div class="chat-list__item-name">{{ chat.name }}</div>
+            @if (chat.lastMessage) {
+              <div class="chat-list__item-time">
+                {{ chat.lastMessage.createdAt | date:'HH:mm' }}
+              </div>
+            }
+          </div>
+
+          <div class="chat-list__item-preview">
+            @if (chat.lastMessage) {
+              @if (chat.lastMessage.senderId === currentUserId) {
+                <span class="chat-list__last-sender">Вы: </span>
+              }
+              {{ chat.lastMessage.content }}
+            } @else {
+              <span class="chat-list__no-messages">Нет сообщений</span>
+            }
+          </div>
         </div>
 
         <button
@@ -52,5 +73,4 @@
       <li class="chat-list__empty">Чатов пока нет</li>
     }
   </ul>
-
 </div>

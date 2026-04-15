@@ -17,29 +17,35 @@ export class ChatService {
     private userRepository: Repository<User>,
   ) {}
 
-  async getUserChats(userId: string) {
-    return this.chatRepository
-      .createQueryBuilder('chat')
-      .innerJoin('chat.participants', 'participant', 'participant.id = :userId', { userId })
-      .leftJoinAndSelect('chat.messages', 'lastMessage')
-      .loadRelationCountAndMap(
-        'chat.unreadCount', 
-        'chat.messages', 
-        'message', 
-        (qb) => qb.andWhere('message.isRead = false AND message.senderId != :userId', { userId })
-      )
-      .where((qb) => {
-        const subQuery = qb
-          .subQuery()
-          .select('MAX(m.createdAt)')
-          .from('message', 'm')
-          .where('m.chatId = chat.id')
-          .getQuery();
-        return 'lastMessage.createdAt = ' + subQuery + ' OR lastMessage.id IS NULL';
-      })
-      .orderBy('lastMessage.createdAt', 'DESC')
-      .getMany();
-  }
+  async getUserChats(userId: string): Promise<Chat[]> {
+  return this.chatRepository
+    .createQueryBuilder('chat')
+    .innerJoin('chat.participants', 'participant', 'participant.id = :userId', { userId })
+    .leftJoinAndSelect('chat.participants', 'allParticipants')
+    
+    .leftJoinAndSelect('chat.messages', 'lastMessage')
+    .andWhere((qb) => {
+      const subQuery = qb
+        .subQuery()
+        .select('m.id')
+        .from('messages', 'm')
+        .where('m.chatId = chat.id')
+        .orderBy('m.createdAt', 'DESC')
+        .limit(1)
+        .getQuery();
+      return 'lastMessage.id = ' + subQuery + ' OR lastMessage.id IS NULL';
+    })
+    .leftJoinAndSelect('lastMessage.sender', 'sender')
+
+    .loadRelationCountAndMap(
+      'chat.unreadCount',
+      'chat.messages',
+      'unreadMsg',
+      (qb) => qb.where('unreadMsg.isRead = false AND unreadMsg.senderId != :userId', { userId })
+    )
+    .orderBy('lastMessage.createdAt', 'DESC')
+    .getMany();
+}
 
   async createDirectChat(userId: string, targetUserId: string): Promise<Chat> {
     const existing = await this.chatRepository

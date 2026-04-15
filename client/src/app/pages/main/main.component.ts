@@ -19,7 +19,7 @@ import { ChatWindowComponent } from './chat-window/chat-window';
 export class MainComponent implements OnInit {
   chats: Chat[] = [];
   activeChatId: string | null = null;
-  currentUser!: User;
+  currentUser: User | null = null
 
   constructor(
     private chatService: ChatService,

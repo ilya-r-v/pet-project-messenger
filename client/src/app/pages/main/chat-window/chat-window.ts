@@ -121,8 +121,10 @@ export class ChatWindowComponent
     }, 2000);
   }
 
-  isMyMessage(msg: Message): boolean {
-    return msg.senderId === this.currentUserId;
+  
+  isMyMessage(msg: any): boolean {
+    const senderId = msg.senderId || msg.sender?.id;
+    return String(senderId) === String(this.currentUserId);
   }
 
   ngOnDestroy(): void {

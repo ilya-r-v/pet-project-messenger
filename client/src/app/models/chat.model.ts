@@ -7,6 +7,8 @@ export interface Chat {
   name?: string;
   participants: User[];
   messages: Message[];
+  lastMessage?: Message;
+  unreadCount: number;
   createdAt: string;
 }
 
