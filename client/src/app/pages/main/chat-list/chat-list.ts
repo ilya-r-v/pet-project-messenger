@@ -26,6 +26,7 @@ export class ChatListComponent implements OnInit, OnDestroy {
   newChatUserId = '';
   errorMessage = '';
   private msgSub?: Subscription;
+  onlineUsers: string[] = [];
 
   constructor(
     private chatService: ChatService, 
@@ -46,6 +47,13 @@ export class ChatListComponent implements OnInit, OnDestroy {
         ];
       }
     });
+    this.socketService.onlineUsers$.subscribe(users => {
+      this.onlineUsers = users;
+    });
+  }
+  isOnline(chat: Chat): boolean {
+    const otherParticipant = chat.participants?.find(p => p.id !== this.currentUserId);
+    return otherParticipant ? this.onlineUsers.includes(otherParticipant.id) : false;
   }
 
   selectChat(chatId: string): void {

@@ -1,4 +1,7 @@
 <div class="messenger">
+  @if (!(isConnected$ | async)) {
+    <div class="connection-warning">Соединение потеряно. Переподключение...</div>
+  }
   <app-chat-list
     [chats]="chats"
     [activeChatId]="activeChatId"

@@ -150,6 +150,30 @@
   color: var(--text-2);
   flex-shrink: 0;
   text-transform: uppercase;
+
+  .online-indicator {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    background-color: #4cd964;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(0,0,0,0.1);
+  }
+
+  .chat-list__unread-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: #ff3b30;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    border: 2px solid #fff;
+  }
 }
 
 .chat-list__item-info {

@@ -92,6 +92,16 @@ export class ChatWindowComponent
         }
       })
     );
+
+    this.subs.push(
+      this.socketService.onMessagesRead().subscribe(data => {
+        if (data.chatId === this.chatId && data.readBy !== this.currentUserId) {
+          this.messages.forEach(m => {
+            if (m.senderId === this.currentUserId) m.isRead = true;
+          });
+        }
+      })
+    );
   }
 
   ngAfterViewChecked(): void {
@@ -125,6 +135,20 @@ export class ChatWindowComponent
   isMyMessage(msg: any): boolean {
     const senderId = msg.senderId || msg.sender?.id;
     return String(senderId) === String(this.currentUserId);
+  }
+
+  private isUserAtBottom(): boolean {
+    const threshold = 100;
+    const position = this.messagesEnd.nativeElement.parentElement.scrollTop + this.messagesEnd.nativeElement.parentElement.offsetHeight;
+    const height = this.messagesEnd.nativeElement.parentElement.scrollHeight;
+    return height - position < threshold;
+  }
+  handleNewMessage(msg: Message) {
+    const atBottom = this.isUserAtBottom();
+    this.messages.push(msg);
+    if (atBottom || msg.senderId === this.currentUserId) {
+      this.shouldScroll = true;
+    }
   }
 
   ngOnDestroy(): void {

@@ -1,5 +1,4 @@
-import { Component, OnInit } from '@angular/core';
-import { NgIf } from '@angular/common';
+import { Component, inject, OnInit } from '@angular/core';
 import { Chat } from '../../models/chat.model';
 import { User } from '../../models/user.model';
 import { ChatService } from '../../core/services/chat.service';
@@ -7,25 +6,27 @@ import { AuthService } from '../../core/services/auth.service';
 import { SocketService } from '../../core/services/socket.service';
 import { ChatListComponent } from './chat-list/chat-list';
 import { ChatWindowComponent } from './chat-window/chat-window';
-
+import { AsyncPipe } from '@angular/common';
 
 @Component({
   selector: 'app-main',
   standalone: true,
-  imports: [ChatListComponent, ChatWindowComponent],
+  imports: [ChatListComponent, ChatWindowComponent, AsyncPipe],
   templateUrl: './main.component.html',
   styleUrls: ['./main.component.scss'],
 })
 export class MainComponent implements OnInit {
+  private socketService = inject(SocketService);
+  private chatService = inject(ChatService);
+  private authService = inject(AuthService);
+
   chats: Chat[] = [];
   activeChatId: string | null = null;
-  currentUser: User | null = null
+  currentUser: User | null = null;
 
-  constructor(
-    private chatService: ChatService,
-    private authService: AuthService,
-    private socketService: SocketService,
-  ) {}
+  isConnected$ = this.socketService.isConnected$;
+  
+  constructor() {}  
 
   ngOnInit(): void {
     this.socketService.connect();

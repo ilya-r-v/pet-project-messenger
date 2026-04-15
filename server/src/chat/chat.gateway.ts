@@ -44,6 +44,7 @@ interface GetHistoryDto {
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
+  private activeUsers = new Map<string, string>();
 
   constructor(
     private chatService: ChatService,
@@ -53,7 +54,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async handleConnection(client: Socket) {
     try {
-      // Токен передаётся через socket.io auth object:
       const rawToken =
         client.handshake.auth?.token ||
         client.handshake.headers?.authorization;
@@ -71,9 +71,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const secret = this.configService.get<string>('JWT_SECRET');
       const payload = this.jwtService.verify(token, { secret });
 
-      client.data.user = { id: payload.sub, email: payload.email };
+      const userId = payload.sub;
+      client.data.user = { id: userId, email: payload.email };
 
-      client.join(`user_${payload.sub}`);
+      this.activeUsers.set(client.id, userId);
+      client.join(`user_${userId}`);
+      this.broadcastPresence();
 
       console.log(`[WS] Connected: ${client.id} | user: ${payload.email}`);
     } catch (err) {
@@ -85,10 +88,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: Socket) {
     const user = client.data?.user;
-    console.log(`[WS] Disconnected: ${client.id} | user: ${user?.email ?? 'unknown'}`);
+    this.activeUsers.delete(client.id);
+    this.broadcastPresence();
 
-    // TODO [Фаза 2]: обновить статус пользователя online → offline в БД
-    // и уведомить его контакты: this.server.emit('userOffline', { userId })
+    console.log(`[WS] Disconnected: ${client.id} | user: ${user?.email ?? 'unknown'}`);
+  }
+  private broadcastPresence() {
+    const uniqueUserIds = Array.from(new Set(this.activeUsers.values()));
+    this.server.emit('presenceUpdate', uniqueUserIds);
   }
 
   @UseGuards(WsAuthGuard)
@@ -108,6 +115,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log(`[WS] User ${userId} joined chat_${dto.chatId}`);
 
     return { event: 'joinedRoom', data: { chatId: dto.chatId } };
+  }
+
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('leaveRoom')
+  handleLeaveRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() dto: JoinRoomDto,
+  ) {
+    client.leave(`chat_${dto.chatId}`);
+    console.log(`[WS] User left chat_${dto.chatId}`);
   }
 
   @UseGuards(WsAuthGuard)
@@ -133,7 +150,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       isRead: message.isRead,
     });
 
-    // TODO [E2EE]: content будет зашифрован на клиенте,
+    // TODO: content будет зашифрован на клиенте,
     // сервер сохраняет и рассылает blob не расшифровывая
   }
 
@@ -167,7 +184,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       dto.cursor,
     );
 
-    return { event: 'history', data: { chatId: dto.chatId, messages } };
+    client.emit('history', { chatId: dto.chatId, messages });
   }
 
   @UseGuards(WsAuthGuard)
@@ -179,7 +196,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = client.data.user.id;
     await this.chatService.markAsRead(dto.chatId, userId);
 
-    client.to(`chat_${dto.chatId}`).emit('messagesRead', {
+    this.server.to(`chat_${dto.chatId}`).emit('messagesRead', {
       chatId: dto.chatId,
       readBy: userId,
     });

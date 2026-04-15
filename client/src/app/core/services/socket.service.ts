@@ -14,6 +14,9 @@ export class SocketService implements OnDestroy {
   private lastMessageId: string | null = null;
   private activeChatId: string | null = null;
 
+  private connectedSubject = new BehaviorSubject<boolean>(false);
+  public isConnected$ = this.connectedSubject.asObservable();
+
   private onlineUsersSubject = new BehaviorSubject<string[]>([]);
   public onlineUsers$ = this.onlineUsersSubject.asObservable();
 
@@ -23,35 +26,30 @@ export class SocketService implements OnDestroy {
 
   connect(): void {
     if (this.socket?.connected) return;
-
     const token = this.authService.getAccessToken();
 
     this.socket = io(this.WS_URL, {
       auth: { token },
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 2000,
     });
 
     this.socket.on('connect', () => {
-      console.log('[WS] Connected:', this.socket.id);
+      this.connectedSubject.next(true);
+      console.log('[WS] Connected');
+      if (this.activeChatId && this.lastMessageId) this.syncMissedMessages();
+    });
 
-      if (this.activeChatId && this.lastMessageId) {
-        this.syncMissedMessages();
-      }
+    this.socket.on('disconnect', () => {
+      this.connectedSubject.next(false); 
+    });
+
+    this.socket.on('presenceUpdate', (users: string[]) => {
+      this.onlineUsersSubject.next(users);
     });
 
     this.socket.on('newMessage', (msg: Message) => {
       this.lastMessageId = msg.id;
       this.messageSubject.next(msg);
-    });
-
-    this.socket.on('disconnect', (reason) => {
-      console.log('[WS] Disconnected:', reason);
-    });
-
-    this.socket.on('error', (err) => {
-      console.error('[WS] Error:', err);
     });
   }
 
@@ -114,9 +112,7 @@ export class SocketService implements OnDestroy {
 
   onMessagesRead(): Observable<{ chatId: string; readBy: string }> {
     return new Observable(observer => {
-      this.socket.on('messagesRead', (data) => {
-        observer.next(data);
-      });
+      this.socket.on('messagesRead', (data) => observer.next(data));
       return () => this.socket.off('messagesRead');
     });
   }
