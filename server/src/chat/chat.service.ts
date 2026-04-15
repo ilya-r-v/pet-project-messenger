@@ -17,16 +17,26 @@ export class ChatService {
     private userRepository: Repository<User>,
   ) {}
 
-  async getUserChats(userId: string): Promise<Chat[]> {
+  async getUserChats(userId: string) {
     return this.chatRepository
       .createQueryBuilder('chat')
       .innerJoin('chat.participants', 'participant', 'participant.id = :userId', { userId })
-      .leftJoinAndSelect('chat.participants', 'allParticipants')
-      .leftJoinAndSelect(
-        'chat.messages',
-        'lastMessage',
-        'lastMessage.createdAt = (SELECT MAX(m."createdAt") FROM messages m WHERE m."chatId" = chat.id)',
+      .leftJoinAndSelect('chat.messages', 'lastMessage')
+      .loadRelationCountAndMap(
+        'chat.unreadCount', 
+        'chat.messages', 
+        'message', 
+        (qb) => qb.andWhere('message.isRead = false AND message.senderId != :userId', { userId })
       )
+      .where((qb) => {
+        const subQuery = qb
+          .subQuery()
+          .select('MAX(m.createdAt)')
+          .from('message', 'm')
+          .where('m.chatId = chat.id')
+          .getQuery();
+        return 'lastMessage.createdAt = ' + subQuery + ' OR lastMessage.id IS NULL';
+      })
       .orderBy('lastMessage.createdAt', 'DESC')
       .getMany();
   }
