@@ -53,6 +53,7 @@ export class ChatController {
     @Param('chatId') chatId: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: number,
+    @Query('afterId') afterId?: string,
   ) {
     return this.chatService.getMessages(chatId, req.user.id, limit, cursor);
   }

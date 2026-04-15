@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Chat, ChatType } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
 import { User } from '../user/entities/user.entity';
+import { MoreThan } from 'typeorm';
 
 @Injectable()
 export class ChatService {
@@ -98,6 +99,7 @@ export class ChatService {
     userId: string,
     limit = 50,
     cursor?: string,
+    afterId?: string,
   ): Promise<Message[]> {
     const isParticipant = await this.isParticipant(chatId, userId);
     if (!isParticipant) {
@@ -108,15 +110,20 @@ export class ChatService {
       .createQueryBuilder('message')
       .leftJoinAndSelect('message.sender', 'sender')
       .where('message.chatId = :chatId', { chatId })
-      .orderBy('message.createdAt', 'DESC')
       .take(limit);
 
-    if (cursor) {
+    if (afterId) {
+      query.andWhere('message.id > :afterId', { afterId });
+      query.orderBy('message.createdAt', 'ASC'); 
+    } else if (cursor) {
       query.andWhere('message.createdAt < :cursor', { cursor: new Date(cursor) });
+      query.orderBy('message.createdAt', 'DESC');
+    } else {
+      query.orderBy('message.createdAt', 'DESC');
     }
-
     const messages = await query.getMany();
-    return messages.reverse(); 
+
+    return afterId ? messages : messages.reverse();
   }
 
   async markAsRead(chatId: string, userId: string): Promise<void> {

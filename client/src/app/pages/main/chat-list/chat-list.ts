@@ -2,6 +2,8 @@ import { Component, Input, Output, EventEmitter, OnChanges } from '@angular/core
 import { FormsModule } from '@angular/forms';
 import { Chat } from '../../../models/chat.model';
 import { ChatService } from '../../../core/services/chat.service';
+import { SocketService } from '../../../core/services/socket.service';
+import { Subscription } from 'rxjs';
 
 
 @Component({
@@ -21,8 +23,26 @@ export class ChatListComponent {
   showForm = false;
   newChatUserId = '';
   errorMessage = '';
+  private msgSub?: Subscription;
 
-  constructor(private chatService: ChatService) {}
+  constructor(private chatService: ChatService, private socketService: SocketService) {}
+
+  ngOnInit(): void {
+    this.msgSub = this.socketService.onMessage().subscribe(msg => {
+      const chat = this.chats.find(c => c.id === msg.chatId);
+      if (chat) {
+        if (!chat.messages) chat.messages = [];
+        
+        if (!chat.messages.some(m => m.id === msg.id)) {
+          chat.messages.push(msg);
+          this.chats = [
+            chat,
+            ...this.chats.filter(c => c.id !== msg.chatId)
+          ];
+        }
+      }
+    });
+  }
 
   selectChat(chatId: string): void {
     this.chatSelected.emit(chatId);
@@ -57,10 +77,18 @@ export class ChatListComponent {
   }
 
   getLastMessage(chat: Chat): string {
-    if (!chat.messages?.length) return 'Нет сообщений';
-    const last = chat.messages[chat.messages.length - 1];
-    return last.content.length > 30
-      ? last.content.slice(0, 30) + '...'
-      : last.content;
+    const messages = chat.messages || [];
+    if (messages.length === 0) return 'Нет сообщений';
+    
+    const last = messages[messages.length - 1];
+    const content = last.content || '';
+    
+    return content.length > 30
+      ? content.slice(0, 30) + '...'
+      : content;
+  }
+
+  ngOnDestroy(): void {
+    this.msgSub?.unsubscribe();
   }
 }

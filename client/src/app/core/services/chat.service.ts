@@ -20,8 +20,8 @@ export class ChatService{
         return this.apiService.createGroup(data);
     }
 
-    getMessages(id: Chat["id"]): Observable<Message[]> {
-        return this.apiService.getMessages(id);
+    getMessages(chatId: string, afterId?: string): Observable<Message[]> {
+        return this.apiService.getMessages(chatId, afterId);
     }
 
     deleteChat(chatId: string): Observable<void> {

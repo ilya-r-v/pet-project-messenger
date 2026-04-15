@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AuthResponse, User } from '../../models/user.model';
@@ -38,8 +38,12 @@ export class ApiService {
         return this.http.post<Chat>(`${this.baseUrl}/chat/group`, data);
     }
 
-    getMessages(id: Chat["id"]): Observable<Message[]> {
-        return this.http.get<Message[]>(`${this.baseUrl}/${id}/messages`)
+    getMessages(id: Chat["id"], afterId?: string): Observable<Message[]> {
+        let params = new HttpParams();
+        if (afterId) {
+            params = params.set('afterId', afterId);
+        }
+        return this.http.get<Message[]>(`${this.baseUrl}/${id}/messages`, { params });
     }
 
     deleteChat(chatId: string): Observable<void> {

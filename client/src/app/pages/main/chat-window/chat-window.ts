@@ -65,9 +65,12 @@ export class ChatWindowComponent
     this.subs.push(
       this.socketService.onMessage().subscribe(msg => {
         if (msg.chatId === this.chatId) {
-          this.messages.push(msg);
-          this.shouldScroll = true;
-          this.socketService.markRead(this.chatId);
+          const exists = this.messages.some(m => m.id === msg.id);
+          if (!exists) {
+            this.messages.push(msg);
+            this.shouldScroll = true;
+            this.socketService.markRead(this.chatId);
+          }
         }
       })
     );
@@ -77,6 +80,7 @@ export class ChatWindowComponent
         if (data.chatId === this.chatId) {
           this.messages = data.messages;
           this.shouldScroll = true;
+          this.socketService.markRead(this.chatId);
         }
       })
     );
