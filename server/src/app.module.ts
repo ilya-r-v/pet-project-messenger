@@ -7,6 +7,7 @@ import { ChatModule } from './chat/chat.module';
 import { User } from './user/entities/user.entity';
 import { Chat } from './chat/entities/chat.entity';
 import { Message } from './chat/entities/message.entity';
+import { MinioModule } from './minio/minio.module';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { Message } from './chat/entities/message.entity';
         logging: config.get<string>('NODE_ENV') === 'development',
       }),
     }),
-
+    MinioModule,
     AuthModule,
     UsersModule,
     ChatModule,
