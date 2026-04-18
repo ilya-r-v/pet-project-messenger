@@ -1,0 +1,67 @@
+<div class="upload" [class.upload--dragover]="isDragOver">
+  @if (!selectedFile) {
+    <div class="upload__dropzone">
+      <span class="upload__icon">📎</span>
+      <p class="upload__hint">Перетащи файл или</p>
+      <label class="upload__label">
+        выбери файл
+        <input
+          type="file"
+          class="upload__input"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          (change)="onFileInput($event)"
+        />
+      </label>
+      <p class="upload__limit">Максимум 10 MB · JPG, PNG, GIF, WebP</p>
+    </div>
+  }
+
+  @if (selectedFile) {
+    <div class="upload__preview">
+
+      @if (preview) {
+        <img class="upload__image" [src]="preview" [alt]="selectedFile.name" />
+      } @else {
+        <div class="upload__file-icon">📄</div>
+      }
+
+      <div class="upload__meta">
+        <span class="upload__filename">{{ selectedFile.name }}</span>
+        <span class="upload__size">{{ fileSizeMb }} MB</span>
+      </div>
+
+      @if (isUploading) {
+        <div class="upload__progress-bar">
+          <div
+            class="upload__progress-fill"
+            [style.width.%]="progress"
+          ></div>
+        </div>
+        <span class="upload__progress-text">{{ progress }}%</span>
+      }
+
+      @if (errorMessage) {
+        <p class="upload__error">{{ errorMessage }}</p>
+      }
+
+      <div class="upload__actions">
+        <button
+          class="upload__btn upload__btn--cancel"
+          (click)="cancel()"
+          [disabled]="isUploading"
+        >
+          Отмена
+        </button>
+        <button
+          class="upload__btn upload__btn--send"
+          (click)="upload()"
+          [disabled]="isUploading"
+        >
+          {{ isUploading ? 'Загружаю...' : 'Отправить' }}
+        </button>
+      </div>
+
+    </div>
+  }
+
+</div>

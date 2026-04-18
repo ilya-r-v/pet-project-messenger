@@ -12,7 +12,11 @@
         [class.message--theirs]="!isMyMessage(msg)"
       >
         <div class="message__bubble">
-          <p class="message__text">{{ msg.content }}</p>
+          @if (isImage(msg.content)) {
+            <img [src]="msg.content" class="message__image" alt="Attachment" />
+          } @else {
+            <p class="message__text">{{ msg.content }}</p>
+          }
           <span class="message__time">
             {{ msg.createdAt | date: 'HH:mm' }}
           </span>
@@ -41,6 +45,9 @@
   </div>
 
   <div class="chat-window__footer">
+    <button class="chat-window__attach-btn" (click)="toggleUpload()">
+      {{ showUpload ? '✕' : '+' }}
+    </button>
     <input
       class="chat-window__input"
       type="text"
@@ -56,6 +63,16 @@
     >
       ➤
     </button>
+
+    @if (showUpload) {
+      <div class="chat-window__upload-panel">
+        <app-file-upload 
+          [chatId]="chatId" 
+          (uploaded)="onFileUploaded($event)"
+          (cancelled)="showUpload = false">
+        </app-file-upload>
+      </div>
+    }
   </div>
 
 </div>

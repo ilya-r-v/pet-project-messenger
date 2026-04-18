@@ -14,11 +14,12 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { Message } from '../../../models/chat.model';
 import { SocketService } from '../../../core/services/socket.service';
+import { FileUploadComponent, UploadedFile } from '../../../shared/components/file-upload/file-upload.component';
 
 @Component({
   selector: 'app-chat-window',
   standalone: true,
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, FileUploadComponent],
   templateUrl: './chat-window.html',
   styleUrls: ['./chat-window.scss'],
 })
@@ -34,6 +35,7 @@ export class ChatWindowComponent
   messages: Message[] = [];
   newMessage = '';
   typingText = '';
+  showUpload = false;
   private shouldScroll = false;
 
   private subs: Subscription[] = [];
@@ -149,6 +151,19 @@ export class ChatWindowComponent
     if (atBottom || msg.senderId === this.currentUserId) {
       this.shouldScroll = true;
     }
+  }
+
+  onFileUploaded(file: UploadedFile): void {
+    this.socketService.sendMessage(this.chatId, file.url);
+    this.showUpload = false;
+  }
+
+  isImage(url: string): boolean {
+    return /\.(jpg|jpeg|png|webp|gif)$/i.test(url);
+  }
+
+  toggleUpload(): void {
+    this.showUpload = !this.showUpload;
   }
 
   ngOnDestroy(): void {
