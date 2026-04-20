@@ -17,6 +17,8 @@ export interface Message {
   chatId: string;
   senderId: string;
   content: string;
+  type: 'text' | 'image' | 'file';
+  thumbnailUrl?: string;
   isRead: boolean;
   createdAt: string;
 }

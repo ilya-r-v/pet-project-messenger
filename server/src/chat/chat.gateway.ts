@@ -131,28 +131,59 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('sendMessage')
   async handleMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody() dto: SendMessageDto,
+    @MessageBody() data: { 
+      chatId: string; 
+      content: string; 
+      type: string; 
+      thumbnailUrl?: string 
+    },
   ) {
     const userId = client.data.user.id;
 
     const message = await this.chatService.saveMessage(
-      dto.chatId,
+      data.chatId,
       userId,
-      dto.content,
+      data.content,
+      (data.type as 'text' | 'image' | 'file') || 'text',
+      data.thumbnailUrl
     );
 
-    this.server.to(`chat_${dto.chatId}`).emit('newMessage', {
+    this.server.to(`chat_${data.chatId}`).emit('newMessage', {
       id: message.id,
       chatId: message.chatId,
       senderId: message.senderId,
       content: message.content,
+      type: message.type,
+      thumbnailUrl: message.thumbnailUrl,
       createdAt: message.createdAt,
       isRead: message.isRead,
     });
-
-    // TODO: content будет зашифрован на клиенте,
-    // сервер сохраняет и рассылает blob не расшифровывая
   }
+  // @SubscribeMessage('sendMessage')
+  // async handleMessage(
+  //   @ConnectedSocket() client: Socket,
+  //   @MessageBody() dto: SendMessageDto,
+  // ) {
+  //   const userId = client.data.user.id;
+
+  //   const message = await this.chatService.saveMessage(
+  //     dto.chatId,
+  //     userId,
+  //     dto.content,
+  //   );
+
+  //   this.server.to(`chat_${dto.chatId}`).emit('newMessage', {
+  //     id: message.id,
+  //     chatId: message.chatId,
+  //     senderId: message.senderId,
+  //     content: message.content,
+  //     createdAt: message.createdAt,
+  //     isRead: message.isRead,
+  //   });
+
+  //   // TODO: content будет зашифрован на клиенте,
+  //   // сервер сохраняет и рассылает blob не расшифровывая
+  // }
 
   @UseGuards(WsAuthGuard)
   @SubscribeMessage('typing')

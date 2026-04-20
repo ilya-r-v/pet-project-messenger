@@ -36,7 +36,7 @@ export class ChatWindowComponent
   newMessage = '';
   typingText = '';
   showUpload = false;
-  private shouldScroll = false;
+  shouldScroll = false;
 
   private subs: Subscription[] = [];
   private typingTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -67,12 +67,8 @@ export class ChatWindowComponent
     this.subs.push(
       this.socketService.onMessage().subscribe(msg => {
         if (msg.chatId === this.chatId) {
-          const exists = this.messages.some(m => m.id === msg.id);
-          if (!exists) {
-            this.messages.push(msg);
-            this.shouldScroll = true;
-            this.socketService.markRead(this.chatId);
-          }
+          this.messages.push(msg); 
+          this.shouldScroll = true;
         }
       })
     );
@@ -154,12 +150,12 @@ export class ChatWindowComponent
   }
 
   onFileUploaded(file: UploadedFile): void {
-    this.socketService.sendMessage(this.chatId, file.url);
+    this.socketService.sendMessage(this.chatId, file.url, 'image', file.thumbnailUrl);
     this.showUpload = false;
   }
 
   isImage(url: string): boolean {
-    return /\.(jpg|jpeg|png|webp|gif)$/i.test(url);
+    return /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(url);
   }
 
   toggleUpload(): void {

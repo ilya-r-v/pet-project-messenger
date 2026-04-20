@@ -100,13 +100,26 @@ export class ChatService {
     return count > 0;
   }
 
-  async saveMessage(chatId: string, senderId: string, content: string): Promise<Message> {
+  async saveMessage(
+    chatId: string, 
+    senderId: string, 
+    content: string, 
+    type: 'text' | 'image' | 'file' = 'text',
+    thumbnailUrl?: string
+  ): Promise<Message> {
     const isParticipant = await this.isParticipant(chatId, senderId);
     if (!isParticipant) {
       throw new ForbiddenException('Вы не участник этого чата');
     }
 
-    const message = this.messageRepository.create({ chatId, senderId, content });
+    const message = this.messageRepository.create({ 
+      chatId, 
+      senderId, 
+      content,
+      type,
+      thumbnailUrl 
+    });
+    
     return this.messageRepository.save(message);
   }
 

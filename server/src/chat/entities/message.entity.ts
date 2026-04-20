@@ -22,6 +22,12 @@ export class Message {
   @Column()
   chatId!: string;
 
+  @Column({ type: 'varchar', default: 'text' })
+  type!: 'text' | 'image' | 'file';
+
+  @Column({ type: 'text', nullable: true })
+  thumbnailUrl?: string;
+
   @Column()
   senderId!: string;
 

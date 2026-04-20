@@ -1,5 +1,4 @@
 <div class="chat-window">
-
   <div class="chat-window__header">
     <span class="chat-window__name">{{ chatName }}</span>
   </div>
@@ -12,19 +11,30 @@
         [class.message--theirs]="!isMyMessage(msg)"
       >
         <div class="message__bubble">
-          @if (isImage(msg.content)) {
-            <img [src]="msg.content" class="message__image" alt="Attachment" />
+          @if (msg.type === 'image' || isImage(msg.content)) {
+            <a [href]="msg.content" target="_blank" class="message__image-link">
+              <img 
+                [src]="msg.thumbnailUrl || msg.content" 
+                class="message__image" 
+                alt="Attachment" 
+                (load)="shouldScroll = true"
+              />
+            </a>
           } @else {
             <p class="message__text">{{ msg.content }}</p>
           }
-          <span class="message__time">
-            {{ msg.createdAt | date: 'HH:mm' }}
-          </span>
-          @if (isMyMessage(msg)) {
-            <span class="message__status">
-              {{ msg.isRead ? '✓✓' : '✓' }}
+          
+          <div class="message__meta">
+            <span class="message__time">
+              {{ msg.createdAt | date: 'HH:mm' }}
             </span>
-          }
+            
+            @if (isMyMessage(msg)) {
+              <span class="message__status" [class.message__status--read]="msg.isRead">
+                {{ msg.isRead ? '✓✓' : '✓' }}
+              </span>
+            }
+          </div>
         </div>
       </div>
     } @empty {
@@ -45,14 +55,14 @@
   </div>
 
   @if (showUpload) {
-      <div class="chat-window__upload-panel">
-        <app-file-upload 
-          [chatId]="chatId" 
-          (uploaded)="onFileUploaded($event)"
-          (cancelled)="showUpload = false">
-        </app-file-upload>
-      </div>
-    }
+    <div class="chat-window__upload-panel">
+      <app-file-upload 
+        [chatId]="chatId" 
+        (uploaded)="onFileUploaded($event)"
+        (cancelled)="showUpload = false">
+      </app-file-upload>
+    </div>
+  }
 
   <div class="chat-window__footer">
     <button class="chat-window__attach-btn" (click)="toggleUpload()">
@@ -74,5 +84,4 @@
       ➤
     </button>
   </div>
-
 </div>

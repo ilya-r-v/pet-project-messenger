@@ -69,8 +69,17 @@ export class SocketService implements OnDestroy {
     this.socket.emit('leaveRoom', { chatId });
   }
 
-  sendMessage(chatId: string, content: string): void {
-    this.socket.emit('sendMessage', { chatId, content });
+  sendMessage(
+    chatId: string, 
+    content: string, 
+    type: 'text' | 'image' | 'file' = 'text', 
+    thumbnailUrl?: string
+  ): void {  this.socket.emit('sendMessage', { 
+      chatId, 
+      content, 
+      type, 
+      thumbnailUrl 
+    });
   }
 
   onMessage(): Observable<Message> {
