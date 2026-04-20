@@ -18,6 +18,10 @@ export const authInterceptor: HttpInterceptorFn = (
   const authService = inject(AuthService);
   const router = inject(Router);
 
+  if (req.url.includes(':9000') || req.url.includes('X-Amz-Signature')) {
+    return next(req);
+  }
+
   if (AUTH_URLS.some((url) => req.url.includes(url))) {
     return next(req);
   }

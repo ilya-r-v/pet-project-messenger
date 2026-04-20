@@ -44,6 +44,16 @@
     <div #messagesEnd></div>
   </div>
 
+  @if (showUpload) {
+      <div class="chat-window__upload-panel">
+        <app-file-upload 
+          [chatId]="chatId" 
+          (uploaded)="onFileUploaded($event)"
+          (cancelled)="showUpload = false">
+        </app-file-upload>
+      </div>
+    }
+
   <div class="chat-window__footer">
     <button class="chat-window__attach-btn" (click)="toggleUpload()">
       {{ showUpload ? '✕' : '+' }}
@@ -63,16 +73,6 @@
     >
       ➤
     </button>
-
-    @if (showUpload) {
-      <div class="chat-window__upload-panel">
-        <app-file-upload 
-          [chatId]="chatId" 
-          (uploaded)="onFileUploaded($event)"
-          (cancelled)="showUpload = false">
-        </app-file-upload>
-      </div>
-    }
   </div>
 
 </div>

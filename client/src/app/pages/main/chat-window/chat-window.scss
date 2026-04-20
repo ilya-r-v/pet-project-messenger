@@ -45,22 +45,31 @@
 }
 
 .chat-window__attach-btn {
-  background: none;
-  border: none;
-  font-size: 20px;
-  color: #007aff;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 18px;
   cursor: pointer;
-  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
 }
 
 .chat-window__upload-panel {
-  position: absolute;
-  bottom: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  z-index: 10;
-  border-top: 1px solid #ddd;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
 }
 
 .chat-window__empty {

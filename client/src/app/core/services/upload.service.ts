@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpEventType } from '@angular/common/http';
-import { Observable, switchMap, map, filter } from 'rxjs';
+import { HttpClient, HttpEventType, HttpEvent } from '@angular/common/http';
+import { Observable, switchMap, map, filter, of, concatMap } from 'rxjs';
 
 export interface UploadProgress {
-  progress: number;       // 0–100
-  url?: string;           // финальный URL после завершения
+  progress: number;
+  url?: string;
   thumbnailUrl?: string;
   key?: string;
 }
@@ -15,10 +15,7 @@ export class UploadService {
 
   constructor(private http: HttpClient) {}
 
-  uploadFile(
-    chatId: string,
-    file: File,
-  ): Observable<UploadProgress> {
+  uploadFile(chatId: string, file: File): Observable<UploadProgress> {
     return this.http
       .post<{ key: string; uploadUrl: string }>(`${this.baseUrl}/upload/presigned`, {
         chatId,
@@ -27,47 +24,40 @@ export class UploadService {
         sizeBytes: file.size,
       })
       .pipe(
-        switchMap(({ key, uploadUrl }) =>
-          this.http
-            .put(uploadUrl, file, {
-              headers: { 'Content-Type': file.type },
+        switchMap(({ key, uploadUrl }) => {
+          const blob = new Blob([file], { type: '' });
+            return this.http.put(uploadUrl, blob, {
               reportProgress: true,
               observe: 'events',
-            })
+              headers: { 'Content-Type': '' }
+          })
             .pipe(
-              map(event => {
+              concatMap((event: HttpEvent<any>) => {
                 if (event.type === HttpEventType.UploadProgress) {
-                  const progress = Math.round(
-                    (100 * (event.loaded ?? 0)) / (event.total ?? 1),
-                  );
-                  return { progress };
+                  const progress = Math.round((100 * (event.loaded ?? 0)) / (event.total ?? 1));
+                  return of({ progress });
                 }
+
                 if (event.type === HttpEventType.Response) {
-                  return { progress: 100, key };
+                  return this.http
+                    .post<{ url: string; thumbnailUrl: string | null; key: string; }>(
+                      `${this.baseUrl}/upload/confirm`,
+                      { key, contentType: file.type }
+                    )
+                    .pipe(
+                      map(confirmed => ({
+                        progress: 100,
+                        url: confirmed.url,
+                        thumbnailUrl: confirmed.thumbnailUrl ?? undefined,
+                        key: confirmed.key,
+                      }))
+                    );
                 }
-                return null;
+                return of(null);
               }),
-              filter(Boolean),
-              switchMap(result => {
-                if (result.progress < 100 || !result.key) {
-                  return [result as UploadProgress];
-                }
-                return this.http
-                  .post<{ url: string; thumbnailUrl: string | null; key: string }>(
-                    `${this.baseUrl}/upload/confirm`,
-                    { key: result.key, contentType: file.type },
-                  )
-                  .pipe(
-                    map(confirmed => ({
-                      progress: 100,
-                      url: confirmed.url,
-                      thumbnailUrl: confirmed.thumbnailUrl ?? undefined,
-                      key: confirmed.key,
-                    })),
-                  );
-              }),
-            ),
-        ),
+              filter((result): result is UploadProgress => result !== null)
+            );
+        })
       );
   }
 }

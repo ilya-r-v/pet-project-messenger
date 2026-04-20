@@ -43,19 +43,11 @@ export class MinioService implements OnModuleInit {
     }
   }
 
-  async getPresignedUploadUrl(
-    chatId: string,
-    fileName: string,
-    contentType: string,
-  ): Promise<{ key: string; uploadUrl: string }> {
+  async getPresignedUploadUrl(chatId: string, fileName: string, contentType: string) {
     const ext = fileName.split('.').pop();
     const key = `chats/${chatId}/${randomUUID()}.${ext}`;
 
-    const uploadUrl = await this.client.presignedPutObject(
-      this.bucket,
-      key,
-      300,
-    );
+    const uploadUrl = await this.client.presignedPutObject(this.bucket, key, 300);
 
     return { key, uploadUrl };
   }
@@ -64,39 +56,34 @@ export class MinioService implements OnModuleInit {
     return this.client.presignedGetObject(this.bucket, key, 3600);
   }
   async processImage(key: string): Promise<string | null> {
-    return new Promise((resolve) => {
-      setImmediate(async () => {
-        try {
-          const stream = await this.client.getObject(this.bucket, key);
-          const chunks: Buffer[] = [];
+    try {
+      const stream = await this.client.getObject(this.bucket, key);
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) {
+        chunks.push(chunk as Buffer);
+      }
+      const buffer = Buffer.concat(chunks);
 
-          for await (const chunk of stream) {
-            chunks.push(chunk as Buffer);
-          }
-          const buffer = Buffer.concat(chunks);
+      const thumbnail = await sharp(buffer)
+        .resize(200, 200, { fit: 'cover' })
+        .jpeg({ quality: 80 })
+        .toBuffer();
 
-          const thumbnail = await sharp(buffer)
-            .resize(200, 200, { fit: 'cover' })
-            .jpeg({ quality: 80 })
-            .toBuffer();
+      const thumbnailKey = key.replace(/(\.[^.]+)$/, '_thumb$1');
+      await this.client.putObject(
+        this.bucket,
+        thumbnailKey,
+        thumbnail,
+        thumbnail.length,
+        { 'Content-Type': 'image/jpeg' },
+      );
 
-          const thumbnailKey = key.replace(/(\.[^.]+)$/, '_thumb$1');
-          await this.client.putObject(
-            this.bucket,
-            thumbnailKey,
-            thumbnail,
-            thumbnail.length,
-            { 'Content-Type': 'image/jpeg' },
-          );
-
-          this.logger.log(`Thumbnail created: ${thumbnailKey}`);
-          resolve(thumbnailKey);
-        } catch (err) {
-          this.logger.error('Image processing error:', err);
-          resolve(null);
-        }
-      });
-    });
+      this.logger.log(`Thumbnail created: ${thumbnailKey}`);
+      return thumbnailKey;
+    } catch (err) {
+      this.logger.error('Image processing error:', err);
+      return null;
+    }
   }
 
   async deleteFile(key: string): Promise<void> {

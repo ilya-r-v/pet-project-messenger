@@ -127,8 +127,12 @@ export class FileUploadComponent {
     this.cdr.markForCheck();
   }
 
-  get fileSizeMb(): string {
+  get fileSize(): string {
     if (!this.selectedFile) return '';
-    return (this.selectedFile.size / 1024 / 1024).toFixed(1);
+    const bytes = this.selectedFile.size;
+    if (bytes < 1024 * 1024) {
+      return (bytes / 1024).toFixed(1) + ' KB';
+    }
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }
 }
