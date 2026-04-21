@@ -55,7 +55,8 @@ export class MinioService implements OnModuleInit {
   async getPresignedDownloadUrl(key: string): Promise<string> {
     return this.client.presignedGetObject(this.bucket, key, 3600);
   }
-  async processImage(key: string): Promise<string | null> {
+  
+  async processImage(key: string, contentType = 'image/jpeg'): Promise<string | null> {
     try {
       const stream = await this.client.getObject(this.bucket, key);
       const chunks: Buffer[] = [];
@@ -64,7 +65,19 @@ export class MinioService implements OnModuleInit {
       }
       const buffer = Buffer.concat(chunks);
 
-      const thumbnail = await sharp(buffer)
+      const resized = await sharp(buffer)
+        .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
+        .toBuffer();
+
+      await this.client.putObject(
+        this.bucket,
+        key,
+        resized,
+        resized.length,
+        { 'Content-Type': contentType },
+      );
+
+      const thumbnail = await sharp(resized)
         .resize(200, 200, { fit: 'cover' })
         .jpeg({ quality: 80 })
         .toBuffer();
