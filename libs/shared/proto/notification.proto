@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package notification;
+
+service NotificationService {
+  rpc SendMessageNotification(MessageNotificationRequest) returns (NotificationResponse);
+
+  rpc SendChatInviteNotification(ChatInviteRequest) returns (NotificationResponse);
+}
+
+message MessageNotificationRequest {
+  string recipient_id = 1;
+  string sender_name = 2;
+  string chat_id = 3;
+  string preview = 4;
+}
+
+message ChatInviteRequest {
+  string recipient_id = 1;
+  string chat_name = 2;
+  string inviter_name = 3;
+}
+
+message NotificationResponse {
+  bool success = 1;
+  string message = 2;
+}

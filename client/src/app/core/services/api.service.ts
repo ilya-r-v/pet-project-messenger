@@ -40,10 +40,8 @@ export class ApiService {
 
     getMessages(id: Chat["id"], afterId?: string): Observable<Message[]> {
         let params = new HttpParams();
-        if (afterId) {
-            params = params.set('afterId', afterId);
-        }
-        return this.http.get<Message[]>(`${this.baseUrl}/${id}/messages`, { params });
+        if (afterId) params = params.set('afterId', afterId);
+        return this.http.get<Message[]>(`${this.baseUrl}/chat/${id}/messages`, { params });
     }
 
     deleteChat(chatId: string): Observable<void> {
