@@ -5,6 +5,7 @@ import { Chat, ChatType } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
 import { User } from '../user/entities/user.entity';
 import { MoreThan } from 'typeorm';
+import { UserGrpcClient } from '../user-grpc.client';
 
 @Injectable()
 export class ChatService {
@@ -15,6 +16,7 @@ export class ChatService {
     private messageRepository: Repository<Message>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    private userGrpcClient: UserGrpcClient,
   ) {}
 
   async getUserChats(userId: string): Promise<Chat[]> {

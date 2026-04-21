@@ -17,7 +17,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "proto:gen": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=./src/generated --ts_proto_opt=nestJs=true,outputServices=grpc-js,snakeToCamel=true --proto_path=../libs/shared/proto ../libs/shared/proto/user.proto ../libs/shared/proto/notification.proto"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.3",
