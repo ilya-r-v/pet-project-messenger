@@ -11,24 +11,28 @@
         [class.message--theirs]="!isMyMessage(msg)"
       >
         <div class="message__bubble">
-          @if (msg.type === 'image' || isImage(msg.content)) {
-            <a [href]="msg.content" target="_blank" class="message__image-link">
-              <img 
-                [src]="msg.thumbnailUrl || msg.content" 
-                class="message__image" 
-                alt="Attachment" 
-                (load)="shouldScroll = true"
-              />
-            </a>
+
+          @if (msg.type === 'image' || isImageKey(msg.content)) {
+            @if (imageUrls.get(getImageKey(msg.content)); as imgUrl) {
+              <a [href]="imgUrl" target="_blank" class="message__image-link">
+                <img
+                  [src]="imgUrl"
+                  class="message__image"
+                  alt="Фото"
+                  (load)="shouldScroll = true"
+                />
+              </a>
+            } @else {
+              <div class="message__image-loading">Загрузка...</div>
+            }
           } @else {
             <p class="message__text">{{ msg.content }}</p>
           }
-          
+
           <div class="message__meta">
             <span class="message__time">
               {{ msg.createdAt | date: 'HH:mm' }}
             </span>
-            
             @if (isMyMessage(msg)) {
               <span class="message__status" [class.message__status--read]="msg.isRead">
                 {{ msg.isRead ? '✓✓' : '✓' }}
@@ -56,11 +60,11 @@
 
   @if (showUpload) {
     <div class="chat-window__upload-panel">
-      <app-file-upload 
-        [chatId]="chatId" 
+      <app-file-upload
+        [chatId]="chatId"
         (uploaded)="onFileUploaded($event)"
-        (cancelled)="showUpload = false">
-      </app-file-upload>
+        (cancelled)="showUpload = false"
+      />
     </div>
   }
 

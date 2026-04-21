@@ -53,6 +53,13 @@ export class UploadController {
     return { key, uploadUrl };
   }
 
+  @Post('url')
+  @ApiOperation({ summary: 'Получить свежий URL для просмотра файла' })
+  async getFileUrl(@Body() body: { key: string }) {
+    const url = await this.minioService.getPresignedDownloadUrl(body.key);
+    return { url };
+  }
+
   @Post('confirm')
   @ApiOperation({ summary: 'Подтвердить загрузку, получить финальный URL' })
   async confirmUpload(

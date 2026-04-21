@@ -15,6 +15,7 @@ import { Subscription } from 'rxjs';
 import { Message } from '../../../models/chat.model';
 import { SocketService } from '../../../core/services/socket.service';
 import { FileUploadComponent, UploadedFile } from '../../../shared/components/file-upload/file-upload.component';
+import { UploadService } from '../../../core/services/upload.service';
 
 @Component({
   selector: 'app-chat-window',
@@ -41,7 +42,9 @@ export class ChatWindowComponent
   private subs: Subscription[] = [];
   private typingTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private socketService: SocketService) {}
+  constructor(
+    private socketService: SocketService,
+    private uploadService: UploadService) {}
 
   ngOnInit(): void {
     this.initSocket();
@@ -66,19 +69,20 @@ export class ChatWindowComponent
 
     this.subs.push(
       this.socketService.onMessage().subscribe(msg => {
-        if (msg.chatId === this.chatId) {
-          this.messages.push(msg); 
-          this.shouldScroll = true;
-        }
-      })
+         if (msg.chatId === this.chatId) {
+          this.messages.push(msg);
+          if (this.isImageKey(msg.content)) {
+            this.loadImage(this.getImageKey(msg.content));
+          }
+      }})
     );
 
     this.subs.push(
       this.socketService.onHistory().subscribe(data => {
         if (data.chatId === this.chatId) {
           this.messages = data.messages;
+          this.preloadImages(data.messages);
           this.shouldScroll = true;
-          this.socketService.markRead(this.chatId);
         }
       })
     );
@@ -129,6 +133,12 @@ export class ChatWindowComponent
     }, 2000);
   }
 
+  private preloadImages(messages: Message[]): void {
+    messages
+      .filter(m => this.isImageKey(m.content))
+      .forEach(m => this.loadImage(this.getImageKey(m.content)));
+  }
+
   
   isMyMessage(msg: any): boolean {
     const senderId = msg.senderId || msg.sender?.id;
@@ -149,8 +159,26 @@ export class ChatWindowComponent
     }
   }
 
+  imageUrls = new Map<string, string>(); // кэш url по key
+
+  isImageKey(content: string): boolean {
+    return content.startsWith('[image]:');
+  }
+
+  getImageKey(content: string): string {
+    return content.replace('[image]:', '');
+  }
+
+  loadImage(key: string): void {
+    if (this.imageUrls.has(key)) return; // уже загружен
+
+    this.uploadService.getImageUrl(key).subscribe(url => {
+      this.imageUrls.set(key, url);
+    });
+  }
+
   onFileUploaded(file: UploadedFile): void {
-    this.socketService.sendMessage(this.chatId, file.url, 'image', file.thumbnailUrl);
+    this.socketService.sendMessage(this.chatId, `[image]:${file.key}`);
     this.showUpload = false;
   }
 

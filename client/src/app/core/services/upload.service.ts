@@ -15,6 +15,12 @@ export class UploadService {
 
   constructor(private http: HttpClient) {}
 
+  getImageUrl(key: string): Observable<string> {
+    return this.http
+      .post<{ url: string }>(`${this.baseUrl}/upload/url`, { key })
+      .pipe(map(r => r.url));
+  }
+
   uploadFile(chatId: string, file: File): Observable<UploadProgress> {
     return this.http
       .post<{ key: string; uploadUrl: string }>(`${this.baseUrl}/upload/presigned`, {
