@@ -1,0 +1,47 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
+:root {
+  --bg: #0f0f0f;
+  --bg-2: #161616;
+  --bg-3: #1e1e1e;
+  --bg-4: #252525;
+  --border: #2a2a2a;
+  --text: #e8e8e8;
+  --text-2: #888;
+  --text-3: #444;
+  --accent: #4f8fff;
+  --accent-dim:rgba(79,143,255,.12);
+  --danger: #ff4f4f;
+  --radius: 10px;
+  --font: 'IBM Plex Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+}
+
+.messenger {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  height: 100vh;
+}
+
+.messenger__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  border-left: 1px solid var(--border);
+}/*# sourceMappingURL=main.component.css.map */
