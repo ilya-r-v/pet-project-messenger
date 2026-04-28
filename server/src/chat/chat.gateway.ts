@@ -9,7 +9,7 @@ import {
   WsException,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { UseGuards } from '@nestjs/common';
+import { forwardRef, Inject, UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { ChatService } from './chat.service';
@@ -47,6 +47,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private activeUsers = new Map<string, string>();
 
   constructor(
+    @Inject(forwardRef(() => ChatService))
     private chatService: ChatService,
     private jwtService: JwtService,
     private configService: ConfigService,

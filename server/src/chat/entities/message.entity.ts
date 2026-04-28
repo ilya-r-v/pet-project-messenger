@@ -42,6 +42,9 @@ export class Message {
   @Column({ default: false })
   isRead!: boolean;
 
+  @Column({ type: 'tsvector', nullable: true })
+  searchVector?: any;
+
   @CreateDateColumn()
   createdAt!: Date;
 }

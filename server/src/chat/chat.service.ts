@@ -1,11 +1,11 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, forwardRef, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Chat, ChatType } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
 import { User } from '../user/entities/user.entity';
-import { MoreThan } from 'typeorm';
 import { UserGrpcClient } from '../user-grpc.client';
+import { ChatGateway } from './chat.gateway';
 
 @Injectable()
 export class ChatService {
@@ -17,37 +17,37 @@ export class ChatService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private userGrpcClient: UserGrpcClient,
+    @Inject(forwardRef(() => ChatGateway))
+    private chatGateway: ChatGateway,
   ) {}
 
   async getUserChats(userId: string): Promise<Chat[]> {
-  return this.chatRepository
-    .createQueryBuilder('chat')
-    .innerJoin('chat.participants', 'participant', 'participant.id = :userId', { userId })
-    .leftJoinAndSelect('chat.participants', 'allParticipants')
-    
-    .leftJoinAndSelect('chat.messages', 'lastMessage')
-    .andWhere((qb) => {
-      const subQuery = qb
-        .subQuery()
-        .select('m.id')
-        .from('messages', 'm')
-        .where('m.chatId = chat.id')
-        .orderBy('m.createdAt', 'DESC')
-        .limit(1)
-        .getQuery();
-      return 'lastMessage.id = ' + subQuery + ' OR lastMessage.id IS NULL';
-    })
-    .leftJoinAndSelect('lastMessage.sender', 'sender')
-
-    .loadRelationCountAndMap(
-      'chat.unreadCount',
-      'chat.messages',
-      'unreadMsg',
-      (qb) => qb.where('unreadMsg.isRead = false AND unreadMsg.senderId != :userId', { userId })
-    )
-    .orderBy('lastMessage.createdAt', 'DESC')
-    .getMany();
-}
+    return this.chatRepository
+      .createQueryBuilder('chat')
+      .innerJoin('chat.participants', 'participant', 'participant.id = :userId', { userId })
+      .leftJoinAndSelect('chat.participants', 'allParticipants')
+      .leftJoinAndSelect('chat.messages', 'lastMessage')
+      .andWhere((qb) => {
+        const subQuery = qb
+          .subQuery()
+          .select('m.id')
+          .from('messages', 'm')
+          .where('m.chatId = chat.id')
+          .orderBy('m.createdAt', 'DESC')
+          .limit(1)
+          .getQuery();
+        return 'lastMessage.id = ' + subQuery + ' OR lastMessage.id IS NULL';
+      })
+      .leftJoinAndSelect('lastMessage.sender', 'sender')
+      .loadRelationCountAndMap(
+        'chat.unreadCount',
+        'chat.messages',
+        'unreadMsg',
+        (qb) => qb.where('unreadMsg.isRead = false AND unreadMsg.senderId != :userId', { userId })
+      )
+      .orderBy('lastMessage.createdAt', 'DESC')
+      .getMany();
+  }
 
   async createDirectChat(userId: string, targetUserId: string): Promise<Chat> {
     const existing = await this.chatRepository
@@ -86,10 +86,6 @@ export class ChatService {
     });
 
     return this.chatRepository.save(chat);
-
-    // TODO [Фаза E2EE]: После создания группового чата —
-    // сгенерировать симметричный ключ группы и зашифровать его
-    // публичным ключом каждого участника
   }
 
   async isParticipant(chatId: string, userId: string): Promise<boolean> {
@@ -152,8 +148,8 @@ export class ChatService {
     } else {
       query.orderBy('message.createdAt', 'DESC');
     }
+    
     const messages = await query.getMany();
-
     return afterId ? messages : messages.reverse();
   }
 
@@ -167,9 +163,24 @@ export class ChatService {
         userId,
       })
       .execute();
+    
+    this.chatGateway.server.to(chatId).emit('messagesRead', {
+      chatId,
+      readerId: userId,
+    });
+  }
+  
+  async searchMessages(chatId: string, query: string) {
+    if (!query || query.trim().length === 0) return [];
 
-    // TODO [Фаза 2]: после обновления — уведомить отправителя через WS
-    // что его сообщения прочитаны (emit 'messagesRead' в комнату)
+    return this.messageRepository
+      .createQueryBuilder('message')
+      .leftJoinAndSelect('message.sender', 'sender')
+      .where('message.chatId = :chatId', { chatId })
+      .andWhere('message.content ILIKE :query', { query: `%${query}%` }) 
+      .orderBy('message.createdAt', 'DESC')
+      .limit(50)
+      .getMany();
   }
 
   async deleteChat(chatId: string, userId: string): Promise<void> {

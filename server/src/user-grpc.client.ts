@@ -3,7 +3,6 @@ import * as microservices from '@nestjs/microservices';
 import { firstValueFrom, Observable } from 'rxjs';
 import { USER_SERVICE_GRPC } from './grpc-client.module';
 
-
 import {
   UserServiceClient,
   GetUserRequest,

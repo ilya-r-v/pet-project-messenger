@@ -35,8 +35,6 @@ export class ChatController {
     return this.chatService.createDirectChat(req.user.id, body.targetUserId);
   }
 
-  //TODO: протестить на постмане group
-
   @Post('group')
   @ApiOperation({ summary: 'Создать групповой чат' })
   createGroup(
@@ -44,6 +42,14 @@ export class ChatController {
     @Body() body: { name: string; memberIds: string[] },
   ) {
     return this.chatService.createGroupChat(req.user.id, body.name, body.memberIds);
+  }
+
+  @Get('search')
+  async search(
+    @Query('chatId') chatId: string,
+    @Query('query') query: string
+  ) {
+    return this.chatService.searchMessages(chatId, query);
   }
 
   @Get(':chatId/messages')

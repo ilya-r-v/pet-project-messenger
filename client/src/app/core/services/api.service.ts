@@ -44,6 +44,15 @@ export class ApiService {
         return this.http.get<Message[]>(`${this.baseUrl}/chat/${id}/messages`, { params });
     }
 
+    searchMessages(chatId: string, query: string): Observable<Message[]> {
+        return this.http.get<Message[]>(`${this.baseUrl}/chat/search`, {
+            params: {
+                chatId: chatId,
+                query: query
+            }
+        });
+    }
+
     deleteChat(chatId: string): Observable<void> {
         return this.http.delete<void>(`${this.baseUrl}/chat/${chatId}`);
     }

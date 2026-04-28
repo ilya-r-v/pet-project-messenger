@@ -1,0 +1,37 @@
+<div class="search-container">
+  <div class="search-header">
+    <div class="input-wrapper">
+      <span class="search-icon">🔍</span>
+      <input 
+        type="text" 
+        [formControl]="searchControl" 
+        placeholder="Поиск по сообщениям..."
+        #searchInput
+      >
+      <button *ngIf="searchControl.value" (click)="searchControl.setValue('')" class="clear-btn">✕</button>
+    </div>
+    <button class="close-btn" (click)="onClose()">Отмена</button>
+  </div>
+
+  <div class="results-area" [class.loading]="isLoading">
+    <div class="loader" *ngIf="isLoading">Ищем...</div>
+
+    <div class="search-results" *ngIf="!isLoading && results.length > 0">
+      <div 
+        *ngFor="let msg of results" 
+        class="result-item" 
+        (click)="goToMessage(msg.id)"
+      >
+        <div class="result-meta">
+          <span class="sender-name">{{ msg.sender?.name || 'Пользователь' }}</span>
+          <span class="message-date">{{ msg.createdAt | date:'dd.MM HH:mm' }}</span>
+        </div>
+        <p class="message-text" [innerHTML]="highlight(msg.content)"></p>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="!isLoading && results.length === 0 && (searchControl.value?.length || 0) > 2">
+      Ничего не найдено
+    </div>
+  </div>
+</div>

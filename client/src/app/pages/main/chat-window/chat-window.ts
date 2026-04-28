@@ -16,11 +16,12 @@ import { Message } from '../../../models/chat.model';
 import { SocketService } from '../../../core/services/socket.service';
 import { FileUploadComponent, UploadedFile } from '../../../shared/components/file-upload/file-upload.component';
 import { UploadService } from '../../../core/services/upload.service';
+import { SearchComponent } from './search/search.component';
 
 @Component({
   selector: 'app-chat-window',
   standalone: true,
-  imports: [FormsModule, DatePipe, FileUploadComponent],
+  imports: [FormsModule, DatePipe, FileUploadComponent, SearchComponent],
   templateUrl: './chat-window.html',
   styleUrls: ['./chat-window.scss'],
 })
@@ -38,6 +39,7 @@ export class ChatWindowComponent
   typingText = '';
   showUpload = false;
   shouldScroll = false;
+  showSearch = false;
 
   private subs: Subscription[] = [];
   private typingTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -159,7 +161,20 @@ export class ChatWindowComponent
     }
   }
 
-  imageUrls = new Map<string, string>(); // кэш url по key
+  onMessageSelected(messageId: string): void {
+    const element = document.getElementById(`msg-${messageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('message--highlighted');
+      setTimeout(() => element.classList.remove('message--highlighted'), 2000);
+    }
+  }
+  
+  toggleSearch(): void {
+    this.showSearch = !this.showSearch;
+  }
+
+  imageUrls = new Map<string, string>();
 
   isImageKey(content: string): boolean {
     return content.startsWith('[image]:');

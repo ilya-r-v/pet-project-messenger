@@ -21,4 +21,9 @@ export interface Message {
   thumbnailUrl?: string;
   isRead: boolean;
   createdAt: string;
+  sender?: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
 }

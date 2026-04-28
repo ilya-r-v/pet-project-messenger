@@ -1,11 +1,26 @@
 <div class="chat-window">
   <div class="chat-window__header">
     <span class="chat-window__name">{{ chatName }}</span>
+    
+    <button class="chat-window__search-btn" (click)="toggleSearch()">
+      🔍
+    </button>
   </div>
+
+  @if (showSearch) {
+    <div class="chat-window__search-container">
+      <app-search 
+        [chatId]="chatId" 
+        (close)="showSearch = false"
+        (messageSelected)="onMessageSelected($event)"
+      />
+    </div>
+  }
 
   <div class="chat-window__messages">
     @for (msg of messages; track msg.id) {
       <div
+        [id]="'msg-' + msg.id"
         class="message"
         [class.message--mine]="isMyMessage(msg)"
         [class.message--theirs]="!isMyMessage(msg)"
