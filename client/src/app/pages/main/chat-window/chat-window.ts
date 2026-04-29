@@ -12,8 +12,9 @@ import {
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { Message } from '../../../models/chat.model';
+import { Chat, Message } from '../../../models/chat.model';
 import { SocketService } from '../../../core/services/socket.service';
+import { CryptoService } from '../../../core/services/crypto.service';
 import { FileUploadComponent, UploadedFile } from '../../../shared/components/file-upload/file-upload.component';
 import { UploadService } from '../../../core/services/upload.service';
 import { SearchComponent } from './search/search.component';
@@ -31,10 +32,14 @@ export class ChatWindowComponent
   @Input() chatId!: string;
   @Input() chatName = '';
   @Input() currentUserId!: string;
+  @Input() chat?: Chat;
 
   @ViewChild('messagesEnd') messagesEnd!: ElementRef;
 
   messages: Message[] = [];
+  decryptedContents = new Map<string, string>();
+  imageUrls = new Map<string, string>();
+
   newMessage = '';
   typingText = '';
   showUpload = false;
@@ -43,10 +48,13 @@ export class ChatWindowComponent
 
   private subs: Subscription[] = [];
   private typingTimeout: ReturnType<typeof setTimeout> | null = null;
+  private sentPlaintexts = new Map<string, string>();
 
   constructor(
     private socketService: SocketService,
-    private uploadService: UploadService) {}
+    private uploadService: UploadService,
+    private cryptoService: CryptoService,
+  ) {}
 
   ngOnInit(): void {
     this.initSocket();
@@ -57,6 +65,7 @@ export class ChatWindowComponent
       const prev = changes['chatId'].previousValue;
       if (prev) this.socketService.leaveRoom(prev);
       this.messages = [];
+      this.decryptedContents.clear();
       this.typingText = '';
       this.initSocket();
     }
@@ -71,18 +80,22 @@ export class ChatWindowComponent
 
     this.subs.push(
       this.socketService.onMessage().subscribe(msg => {
-         if (msg.chatId === this.chatId) {
+        if (msg.chatId === this.chatId) {
           this.messages.push(msg);
+          this.decryptMessage(msg);
           if (this.isImageKey(msg.content)) {
             this.loadImage(this.getImageKey(msg.content));
           }
-      }})
+          this.shouldScroll = true;
+        }
+      })
     );
 
     this.subs.push(
       this.socketService.onHistory().subscribe(data => {
         if (data.chatId === this.chatId) {
           this.messages = data.messages;
+          this.decryptAllMessages(data.messages);
           this.preloadImages(data.messages);
           this.shouldScroll = true;
         }
@@ -101,11 +114,91 @@ export class ChatWindowComponent
       this.socketService.onMessagesRead().subscribe(data => {
         if (data.chatId === this.chatId && data.readBy !== this.currentUserId) {
           this.messages.forEach(m => {
-            if (m.senderId === this.currentUserId) m.isRead = true;
+            if (this.isMyMessage(m)) m.isRead = true;
           });
         }
       })
     );
+  }
+
+  async sendMessage(): Promise<void> {
+    if (!this.newMessage.trim()) return;
+
+    const plaintext = this.newMessage.trim();
+    this.newMessage = '';
+    this.socketService.sendTyping(this.chatId, false);
+
+    if (this.chat?.type === 'direct') {
+      try {
+        const recipientId = this.getRecipientId();
+        if (recipientId) {
+          const publicKey = await this.cryptoService.getRecipientPublicKey(recipientId);
+
+          if (!publicKey) {
+            this.socketService.sendMessage(this.chatId, plaintext);
+            return;
+          }
+
+          const encrypted = await this.cryptoService.encrypt(plaintext, publicKey);
+          
+          this.sentPlaintexts.set(encrypted, plaintext); 
+
+          this.socketService.sendMessage(this.chatId, `[e2ee]:${encrypted}`);
+          return;
+        }
+      } catch (err) {
+        console.warn('[E2EE] Ошибка шифрования:', err);
+      }
+    }
+
+    this.socketService.sendMessage(this.chatId, plaintext);
+  }
+
+  private async decryptMessage(msg: Message): Promise<void> {
+    if (!msg.content.startsWith('[e2ee]:')) return;
+
+    const cipher = msg.content.replace('[e2ee]:', '');
+
+    if (this.isMyMessage(msg)) {
+      const cachedText = this.sentPlaintexts.get(cipher);
+      if (cachedText) {
+        this.decryptedContents.set(msg.id, cachedText);
+      } else {
+        this.decryptedContents.set(msg.id, '[Зашифровано для получателя]');
+      }
+      return;
+    }
+
+    try {
+      const myPublicKey = await this.cryptoService.getRecipientPublicKey(this.currentUserId);
+      if (!myPublicKey) return;
+
+      const decrypted = await this.cryptoService.decrypt(cipher, myPublicKey);
+      this.decryptedContents.set(msg.id, decrypted ?? '[не удалось расшифровать]');
+    } catch (err) {
+      this.decryptedContents.set(msg.id, '[Ошибка дешифрования]');
+    }
+  }
+
+  private decryptAllMessages(messages: Message[]): void {
+    messages.forEach(msg => this.decryptMessage(msg));
+  }
+
+  getDisplayContent(msg: Message): string {
+    if (this.isEncrypted(msg)) {
+      return this.decryptedContents.get(msg.id) ?? '🔒 Расшифровка...';
+    }
+    return msg.content;
+  }
+
+  isEncrypted(msg: Message): boolean {
+    return msg.content?.startsWith('[e2ee]:');
+  }
+
+  private getRecipientId(): string | null {
+    if (!this.chat?.participants) return null;
+    const recipient = this.chat.participants.find(p => p.id !== this.currentUserId);
+    return recipient?.id ?? null;
   }
 
   ngAfterViewChecked(): void {
@@ -116,19 +209,13 @@ export class ChatWindowComponent
   }
 
   private scrollToBottom(): void {
-    this.messagesEnd?.nativeElement.scrollIntoView({ behavior: 'smooth' });
-  }
-
-  sendMessage(): void {
-    if (!this.newMessage.trim()) return;
-    this.socketService.sendMessage(this.chatId, this.newMessage.trim());
-    this.newMessage = '';
-    this.socketService.sendTyping(this.chatId, false);
+    try {
+      this.messagesEnd?.nativeElement.scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {}
   }
 
   onInput(): void {
     this.socketService.sendTyping(this.chatId, true);
-
     if (this.typingTimeout) clearTimeout(this.typingTimeout);
     this.typingTimeout = setTimeout(() => {
       this.socketService.sendTyping(this.chatId, false);
@@ -141,24 +228,9 @@ export class ChatWindowComponent
       .forEach(m => this.loadImage(this.getImageKey(m.content)));
   }
 
-  
   isMyMessage(msg: any): boolean {
     const senderId = msg.senderId || msg.sender?.id;
     return String(senderId) === String(this.currentUserId);
-  }
-
-  private isUserAtBottom(): boolean {
-    const threshold = 100;
-    const position = this.messagesEnd.nativeElement.parentElement.scrollTop + this.messagesEnd.nativeElement.parentElement.offsetHeight;
-    const height = this.messagesEnd.nativeElement.parentElement.scrollHeight;
-    return height - position < threshold;
-  }
-  handleNewMessage(msg: Message) {
-    const atBottom = this.isUserAtBottom();
-    this.messages.push(msg);
-    if (atBottom || msg.senderId === this.currentUserId) {
-      this.shouldScroll = true;
-    }
   }
 
   onMessageSelected(messageId: string): void {
@@ -169,24 +241,21 @@ export class ChatWindowComponent
       setTimeout(() => element.classList.remove('message--highlighted'), 2000);
     }
   }
-  
+
   toggleSearch(): void {
     this.showSearch = !this.showSearch;
   }
 
-  imageUrls = new Map<string, string>();
-
   isImageKey(content: string): boolean {
-    return content.startsWith('[image]:');
+    return content?.startsWith('[image]:');
   }
 
   getImageKey(content: string): string {
-    return content.replace('[image]:', '');
+    return content?.replace('[image]:', '');
   }
 
   loadImage(key: string): void {
-    if (this.imageUrls.has(key)) return; // уже загружен
-
+    if (this.imageUrls.has(key)) return;
     this.uploadService.getImageUrl(key).subscribe(url => {
       this.imageUrls.set(key, url);
     });

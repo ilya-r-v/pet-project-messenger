@@ -40,8 +40,13 @@
             } @else {
               <div class="message__image-loading">Загрузка...</div>
             }
-          } @else {
-            <p class="message__text">{{ msg.content }}</p>
+          }  @else {
+            <p class="message__text">
+              {{ getDisplayContent(msg) }}
+              @if (isEncrypted(msg)) {
+                <span class="message__lock" title="Сообщение зашифровано">(зашифровано)</span>
+              }
+            </p>
           }
 
           <div class="message__meta">

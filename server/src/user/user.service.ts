@@ -53,11 +53,8 @@ export class UsersService {
     await this.usersRepository.update(userId, { publicKey });
   }
 
-  async getPublicKey(userId: string): Promise<string> {
+  async getPublicKey(userId: string): Promise<string | null> {
     const user = await this.findOne(userId);
-    if (!user.publicKey) {
-      throw new NotFoundException(`Public key for user ${userId} not found`);
-    }
-    return user.publicKey;
+    return user.publicKey ?? null;
   }
 }

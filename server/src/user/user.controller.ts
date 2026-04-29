@@ -11,49 +11,52 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 @ApiTags('Users')
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+    constructor(private readonly usersService: UsersService) {}
 
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
-  }
+    @Post()
+    create(@Body() createUserDto: CreateUserDto) {
+        return this.usersService.create(createUserDto);
+    }
 
-  @Get()
-  findAll() {
-    return this.usersService.findAll();
-  }
+    @Get()
+    findAll() {
+        return this.usersService.findAll();
+    }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
-  }
+    @Get(':id')
+    findOne(@Param('id') id: string) {
+        return this.usersService.findOne(id);
+    }
 
-  @Put(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
-  }
+    @Put(':id')
+    update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+        return this.usersService.update(id, updateUserDto);
+    }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
-  }
+    @Delete(':id')
+    remove(@Param('id') id: string) {
+        return this.usersService.remove(id);
+    }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @Post('public-key')
-  @ApiOperation({ summary: 'Сохранить публичный ключ E2EE' })
-  savePublicKey(
-    @Request() req: { user: { id: string } },
-    @Body() body: { publicKey: string },
-  ) {
-    return this.usersService.savePublicKey(req.user.id, body.publicKey);
-  }
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @Post('public-key')
+    @ApiOperation({ summary: 'Сохранить публичный ключ E2EE' })
+    savePublicKey(
+        @Request() req: { user: { id: string } },
+        @Body() body: { publicKey: string },
+    ) {
+        return this.usersService.savePublicKey(req.user.id, body.publicKey);
+    }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @Get(':id/public-key')
-  @ApiOperation({ summary: 'Получить публичный ключ пользователя' })
-  getPublicKey(@Param('id') id: string) {
-    return this.usersService.getPublicKey(id).then(key => ({ publicKey: key }));
-  }
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @Get(':id/public-key')
+    async getPublicKey(@Param('id') id: string) {
+        const publicKey = await this.usersService.getPublicKey(id);
+        if (!publicKey) {
+            return { publicKey: null };
+        }
+        return { publicKey };
+    }
 }
