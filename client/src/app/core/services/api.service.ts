@@ -56,4 +56,12 @@ export class ApiService {
     deleteChat(chatId: string): Observable<void> {
         return this.http.delete<void>(`${this.baseUrl}/chat/${chatId}`);
     }
+
+    savePublicKey(publicKey: string): Observable<void> {
+        return this.http.post<void>(`${this.baseUrl}/users/public-key`, { publicKey });
+    }
+
+    getPublicKey(userId: string): Observable<{ publicKey: string }> {
+        return this.http.get<{ publicKey: string }>(`${this.baseUrl}/users/${userId}/public-key`);
+    }
 }

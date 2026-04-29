@@ -24,8 +24,11 @@ export class User {
 
   @Column()
   @Exclude()
-  @ApiHideProperty() 
+  @ApiHideProperty()
   password!: string;
+
+  @Column({ nullable: true, type: 'text' })
+  publicKey?: string;
 
   @CreateDateColumn()
   createdAt!: Date;
