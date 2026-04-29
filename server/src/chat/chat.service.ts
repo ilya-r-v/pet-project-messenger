@@ -101,7 +101,7 @@ export class ChatService {
   async saveMessage(
     chatId: string, 
     senderId: string, 
-    content: string, 
+    content: string,
     type: 'text' | 'image' | 'file' = 'text',
     thumbnailUrl?: string
   ): Promise<Message> {
@@ -113,7 +113,7 @@ export class ChatService {
     const message = this.messageRepository.create({ 
       chatId, 
       senderId, 
-      content,
+      content: Buffer.from(content.replace('[e2ee]:', ''), 'base64'), 
       type,
       thumbnailUrl 
     });
@@ -170,17 +170,22 @@ export class ChatService {
     });
   }
   
-  async searchMessages(chatId: string, query: string) {
-    if (!query || query.trim().length === 0) return [];
+  // async searchMessages(chatId: string, query: string) {
+  //   if (!query || query.trim().length === 0) return [];
 
-    return this.messageRepository
-      .createQueryBuilder('message')
-      .leftJoinAndSelect('message.sender', 'sender')
-      .where('message.chatId = :chatId', { chatId })
-      .andWhere('message.content ILIKE :query', { query: `%${query}%` }) 
-      .orderBy('message.createdAt', 'DESC')
-      .limit(50)
-      .getMany();
+  //   return this.messageRepository
+  //     .createQueryBuilder('message')
+  //     .leftJoinAndSelect('message.sender', 'sender')
+  //     .where('message.chatId = :chatId', { chatId })
+  //     .andWhere('message.content ILIKE :query', { query: `%${query}%` }) 
+  //     .orderBy('message.createdAt', 'DESC')
+  //     .limit(50)
+  //     .getMany();
+  // }
+
+  async searchMessages(chatId: string, query: string) {
+    console.warn(`[E2EE] Поиск по контенту отключен для чата ${chatId}`);
+    return []; 
   }
 
   async deleteChat(chatId: string, userId: string): Promise<void> {

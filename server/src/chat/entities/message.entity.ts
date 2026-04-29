@@ -14,10 +14,8 @@ export class Message {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'text' })
-  content!: string;
-
-  // TODO [E2EE]: content сделать зашифрованным blob
+  @Column({ type: 'bytea' })
+  content!: Buffer; 
 
   @Column()
   chatId!: string;
@@ -42,8 +40,8 @@ export class Message {
   @Column({ default: false })
   isRead!: boolean;
 
-  @Column({ type: 'tsvector', nullable: true })
-  searchVector?: any;
+  // @Column({ type: 'tsvector', nullable: true })
+  // searchVector?: any;
 
   @CreateDateColumn()
   createdAt!: Date;

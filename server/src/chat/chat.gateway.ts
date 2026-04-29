@@ -153,38 +153,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       id: message.id,
       chatId: message.chatId,
       senderId: message.senderId,
-      content: message.content,
+      content: `[e2ee]:${message.content.toString('base64')}`, 
       type: message.type,
       thumbnailUrl: message.thumbnailUrl,
       createdAt: message.createdAt,
       isRead: message.isRead,
     });
   }
-  // @SubscribeMessage('sendMessage')
-  // async handleMessage(
-  //   @ConnectedSocket() client: Socket,
-  //   @MessageBody() dto: SendMessageDto,
-  // ) {
-  //   const userId = client.data.user.id;
-
-  //   const message = await this.chatService.saveMessage(
-  //     dto.chatId,
-  //     userId,
-  //     dto.content,
-  //   );
-
-  //   this.server.to(`chat_${dto.chatId}`).emit('newMessage', {
-  //     id: message.id,
-  //     chatId: message.chatId,
-  //     senderId: message.senderId,
-  //     content: message.content,
-  //     createdAt: message.createdAt,
-  //     isRead: message.isRead,
-  //   });
-
-  //   // TODO: content будет зашифрован на клиенте,
-  //   // сервер сохраняет и рассылает blob не расшифровывая
-  // }
 
   @UseGuards(WsAuthGuard)
   @SubscribeMessage('typing')
