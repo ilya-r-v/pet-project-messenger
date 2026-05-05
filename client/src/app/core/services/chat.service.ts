@@ -44,8 +44,13 @@ export class ChatService {
         return this.apiService.createDirect(targetUserId);
     }
 
-    createGroup(data:{name: string, memberIds: string[]}): Observable<Chat>{
-        return this.apiService.createGroup(data);
+    createGroup(name: string, participants: { userId: string, encryptedRoomKey: string }[]): Observable<Chat> {
+        return this.apiService.createGroup(name, participants).pipe(
+            tap(newChat => {
+                const currentChats = this.chatsSubject.value;
+                this.chatsSubject.next([newChat, ...currentChats]);
+            })
+        );
     }
 
     getMessages(chatId: string, afterId?: string): Observable<Message[]> {

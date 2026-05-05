@@ -53,6 +53,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private configService: ConfigService,
   ) {}
 
+  private formatMessageForClient(message: any) {
+    const content = Buffer.isBuffer(message.content) 
+      ? message.content.toString('base64') 
+      : message.content;
+
+    return {
+      ...message,
+      content: `[e2ee]:${content}`,
+    };
+  }
+
   async handleConnection(client: Socket) {
     try {
       const rawToken =
@@ -129,6 +140,36 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @UseGuards(WsAuthGuard)
+  @SubscribeMessage('typing')
+  handleTyping(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() dto: TypingDto,
+  ) {
+    const userId = client.data.user.id;
+
+    client.to(`chat_${dto.chatId}`).emit('userTyping', {
+      userId,
+      chatId: dto.chatId,
+      isTyping: dto.isTyping,
+    });
+  }
+
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('markRead')
+  async handleMarkRead(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() dto: { chatId: string },
+  ) {
+    const userId = client.data.user.id;
+    await this.chatService.markAsRead(dto.chatId, userId);
+
+    this.server.to(`chat_${dto.chatId}`).emit('messagesRead', {
+      chatId: dto.chatId,
+      readBy: userId,
+    });
+  }
+
+  @UseGuards(WsAuthGuard)
   @SubscribeMessage('sendMessage')
   async handleMessage(
     @ConnectedSocket() client: Socket,
@@ -149,31 +190,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       data.thumbnailUrl
     );
 
-    this.server.to(`chat_${data.chatId}`).emit('newMessage', {
-      id: message.id,
-      chatId: message.chatId,
-      senderId: message.senderId,
-      content: `[e2ee]:${message.content.toString('base64')}`, 
-      type: message.type,
-      thumbnailUrl: message.thumbnailUrl,
-      createdAt: message.createdAt,
-      isRead: message.isRead,
-    });
-  }
-
-  @UseGuards(WsAuthGuard)
-  @SubscribeMessage('typing')
-  handleTyping(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() dto: TypingDto,
-  ) {
-    const userId = client.data.user.id;
-
-    client.to(`chat_${dto.chatId}`).emit('userTyping', {
-      userId,
-      chatId: dto.chatId,
-      isTyping: dto.isTyping,
-    });
+    this.server.to(`chat_${data.chatId}`).emit('newMessage', this.formatMessageForClient(message));
   }
 
   @UseGuards(WsAuthGuard)
@@ -191,21 +208,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       dto.cursor,
     );
 
-    client.emit('history', { chatId: dto.chatId, messages });
-  }
+    const formattedMessages = messages.map(msg => this.formatMessageForClient(msg));
 
-  @UseGuards(WsAuthGuard)
-  @SubscribeMessage('markRead')
-  async handleMarkRead(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() dto: { chatId: string },
-  ) {
-    const userId = client.data.user.id;
-    await this.chatService.markAsRead(dto.chatId, userId);
-
-    this.server.to(`chat_${dto.chatId}`).emit('messagesRead', {
-      chatId: dto.chatId,
-      readBy: userId,
-    });
+    client.emit('history', { chatId: dto.chatId, messages: formattedMessages });
   }
 }

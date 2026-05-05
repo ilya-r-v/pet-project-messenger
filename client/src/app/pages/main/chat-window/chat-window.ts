@@ -83,9 +83,6 @@ export class ChatWindowComponent
         if (msg.chatId === this.chatId) {
           this.messages.push(msg);
           this.decryptMessage(msg);
-          if (this.isImageKey(msg.content)) {
-            this.loadImage(this.getImageKey(msg.content));
-          }
           this.shouldScroll = true;
         }
       })
@@ -94,9 +91,8 @@ export class ChatWindowComponent
     this.subs.push(
       this.socketService.onHistory().subscribe(data => {
         if (data.chatId === this.chatId) {
-          this.messages = data.messages;
+          this.messages = data.messages.map(m => this.normalizeMessage(m));
           this.decryptAllMessages(data.messages);
-          this.preloadImages(data.messages);
           this.shouldScroll = true;
         }
       })
@@ -134,49 +130,63 @@ export class ChatWindowComponent
         if (recipientId) {
           const publicKey = await this.cryptoService.getRecipientPublicKey(recipientId);
 
-          if (!publicKey) {
-            this.socketService.sendMessage(this.chatId, plaintext);
+          if (publicKey) {
+            const encryptedBase64 = await this.cryptoService.encrypt(plaintext, publicKey);
+            this.sentPlaintexts.set(encryptedBase64, plaintext); 
+            this.socketService.sendMessage(this.chatId, `[e2ee]:${encryptedBase64}`);
             return;
           }
-
-          const encrypted = await this.cryptoService.encrypt(plaintext, publicKey);
-          
-          this.sentPlaintexts.set(encrypted, plaintext); 
-
-          this.socketService.sendMessage(this.chatId, `[e2ee]:${encrypted}`);
-          return;
         }
       } catch (err) {
         console.warn('[E2EE] Ошибка шифрования:', err);
       }
     }
 
-    this.socketService.sendMessage(this.chatId, plaintext);
+    const base64 = btoa(encodeURIComponent(plaintext));
+    this.socketService.sendMessage(this.chatId, base64);
   }
 
   private async decryptMessage(msg: Message): Promise<void> {
-    if (!msg.content.startsWith('[e2ee]:')) return;
+    if (!msg.contentBase64) return;
 
-    const cipher = msg.content.replace('[e2ee]:', '');
+    const isEncrypted = msg.contentBase64.startsWith('[e2ee]:');
+    const cleanBase64 = isEncrypted 
+        ? msg.contentBase64.replace('[e2ee]:', '') 
+        : msg.contentBase64;
 
-    if (this.isMyMessage(msg)) {
-      const cachedText = this.sentPlaintexts.get(cipher);
-      if (cachedText) {
-        this.decryptedContents.set(msg.id, cachedText);
-      } else {
-        this.decryptedContents.set(msg.id, '[Зашифровано для получателя]');
-      }
-      return;
+    if (this.isMyMessage(msg) && this.sentPlaintexts.has(cleanBase64)) {
+        this.decryptedContents.set(msg.id, this.sentPlaintexts.get(cleanBase64)!);
+        return;
+    }
+
+    if (isEncrypted && this.chat?.type === 'direct' && msg.type === 'text') {
+        try {
+            const myPrivateKey = await this.cryptoService.loadPrivateKey();
+            if (myPrivateKey) {
+                const decrypted = await this.cryptoService.decrypt(msg.contentBase64, myPrivateKey);
+                if (decrypted && decrypted !== '🔒 Ошибка расшифровки') {
+                    if (decrypted.startsWith('[image]:')) {
+                        this.loadImage(decrypted.replace('[image]:', ''));
+                    }
+                    this.decryptedContents.set(msg.id, decrypted);
+                    return;
+                }
+            }
+        } catch (err) {
+            console.error('[Crypto] Ошибка дешифрования:', err);
+        }
     }
 
     try {
-      const myPublicKey = await this.cryptoService.getRecipientPublicKey(this.currentUserId);
-      if (!myPublicKey) return;
-
-      const decrypted = await this.cryptoService.decrypt(cipher, myPublicKey);
-      this.decryptedContents.set(msg.id, decrypted ?? '[не удалось расшифровать]');
-    } catch (err) {
-      this.decryptedContents.set(msg.id, '[Ошибка дешифрования]');
+        const decoded = decodeURIComponent(atob(cleanBase64));
+        
+        if (decoded.startsWith('[image]:')) {
+            this.loadImage(decoded.replace('[image]:', ''));
+        }
+        
+        this.decryptedContents.set(msg.id, decoded);
+    } catch (e) {
+        this.decryptedContents.set(msg.id, cleanBase64);
     }
   }
 
@@ -184,15 +194,19 @@ export class ChatWindowComponent
     messages.forEach(msg => this.decryptMessage(msg));
   }
 
-  getDisplayContent(msg: Message): string {
-    if (this.isEncrypted(msg)) {
-      return this.decryptedContents.get(msg.id) ?? '🔒 Расшифровка...';
+  private normalizeMessage(msg: Message): Message {
+    if (msg.content && typeof msg.content === 'object' && 'type' in msg.content && msg.content.type === 'Buffer') {
+      msg.contentBase64 = Buffer.from((msg.content as any).data).toString('base64');
     }
-    return msg.content;
+    return msg;
+  }
+
+  getDisplayContent(msg: Message): string {
+    return this.decryptedContents.get(msg.id) ?? '🔒 Расшифровка...';
   }
 
   isEncrypted(msg: Message): boolean {
-    return msg.content?.startsWith('[e2ee]:');
+    return this.chat?.type === 'direct' && msg.type === 'text';
   }
 
   private getRecipientId(): string | null {
@@ -222,12 +236,6 @@ export class ChatWindowComponent
     }, 2000);
   }
 
-  private preloadImages(messages: Message[]): void {
-    messages
-      .filter(m => this.isImageKey(m.content))
-      .forEach(m => this.loadImage(this.getImageKey(m.content)));
-  }
-
   isMyMessage(msg: any): boolean {
     const senderId = msg.senderId || msg.sender?.id;
     return String(senderId) === String(this.currentUserId);
@@ -246,12 +254,13 @@ export class ChatWindowComponent
     this.showSearch = !this.showSearch;
   }
 
-  isImageKey(content: string): boolean {
-    return content?.startsWith('[image]:');
+  getImageKey(msg: Message): string {
+    const content = this.decryptedContents.get(msg.id) || '';
+    return content.replace('[image]:', '');
   }
 
-  getImageKey(content: string): string {
-    return content?.replace('[image]:', '');
+  isImage(msg: Message): boolean {
+    return msg.type === 'image' || (this.decryptedContents.get(msg.id)?.startsWith('[image]:') ?? false);
   }
 
   loadImage(key: string): void {
@@ -262,12 +271,9 @@ export class ChatWindowComponent
   }
 
   onFileUploaded(file: UploadedFile): void {
-    this.socketService.sendMessage(this.chatId, `[image]:${file.key}`);
+    const base64 = btoa(encodeURIComponent(`[image]:${file.key}`));
+    this.socketService.sendMessage(this.chatId, base64);
     this.showUpload = false;
-  }
-
-  isImage(url: string): boolean {
-    return /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(url);
   }
 
   toggleUpload(): void {

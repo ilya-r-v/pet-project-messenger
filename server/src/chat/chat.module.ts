@@ -9,10 +9,11 @@ import { Message } from './entities/message.entity';
 import { User } from '../user/entities/user.entity';
 import { GrpcClientModule } from '../grpc-client.module';
 import { UserGrpcClient } from '../user-grpc.client';
+import { ChatParticipant } from './entities/chat-participant.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Chat, Message, User]),
+    TypeOrmModule.forFeature([Chat, Message, User, ChatParticipant]),
     GrpcClientModule,
     JwtModule,
   ],

@@ -36,12 +36,15 @@ export class ChatController {
   }
 
   @Post('group')
-  @ApiOperation({ summary: 'Создать групповой чат' })
+  @ApiOperation({ summary: 'Создать групповой чат (E2EE)' })
   createGroup(
     @Request() req: { user: { id: string } },
-    @Body() body: { name: string; memberIds: string[] },
+    @Body() body: { 
+      name: string; 
+      participants: { userId: string, encryptedRoomKey: string }[] 
+    },
   ) {
-    return this.chatService.createGroupChat(req.user.id, body.name, body.memberIds);
+    return this.chatService.createGroupChat(body.name, body.participants);
   }
 
   @Get('search')

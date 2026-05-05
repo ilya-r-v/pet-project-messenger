@@ -5,6 +5,8 @@ import { Chat } from '../../../models/chat.model';
 import { ChatService } from '../../../core/services/chat.service';
 import { SocketService } from '../../../core/services/socket.service';
 import { Subscription } from 'rxjs';
+import { User } from '../../../models/user.model';
+import { CryptoService } from '../../../core/services/crypto.service';
 
 @Component({
   selector: 'app-chat-list',
@@ -30,7 +32,8 @@ export class ChatListComponent implements OnInit, OnDestroy {
 
   constructor(
     private chatService: ChatService, 
-    private socketService: SocketService
+    private socketService: SocketService,
+    private cryptoService: CryptoService
   ) {}
 
   ngOnInit(): void {
@@ -89,6 +92,33 @@ export class ChatListComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     this.chatService.deleteChat(chatId).subscribe({
       next: () => this.chatDeleted.emit(chatId),
+    });
+  }
+
+  async createGroup(name: string, selectedUsers: User[]) {
+    const sodium = await this.cryptoService.getSodium();
+    const roomKey = await this.cryptoService.generateRoomKey();
+    const roomKeyBase64 = sodium.to_base64(roomKey);
+
+    const participantKeys = await Promise.all(selectedUsers.map(async (user) => {
+      const pubKey = await this.cryptoService.getRecipientPublicKey(user.id);
+      const encryptedK = await this.cryptoService.encrypt(roomKeyBase64, pubKey!);
+      return {
+        userId: user.id,
+        encryptedRoomKey: encryptedK
+      };
+    }));
+
+    this.chatService.createGroup(name, participantKeys).subscribe({
+      next: (chat) => {
+        this.chatCreated.emit(chat);
+        this.chatSelected.emit(chat.id);
+        this.toggleForm();
+      },
+      error: (err) => {
+        this.errorMessage = 'Не удалось создать группу';
+        console.error(err);
+      }
     });
   }
 

@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Message } from './message.entity';
+import { ChatParticipant } from './chat-participant.entity';
 
 export enum ChatType {
   DIRECT = 'direct', 
@@ -30,12 +31,9 @@ export class Chat {
   })
   type!: ChatType;
 
-  @ManyToMany(() => User)
-  @JoinTable({
-    name: 'chat_participants',
-    joinColumn: { name: 'chatId' },
-    inverseJoinColumn: { name: 'userId' },
-  })
+  @OneToMany(() => ChatParticipant, (cp) => cp.chat, { cascade: true })
+  participantObjects: ChatParticipant[];
+
   participants!: User[];
 
   @OneToMany(() => Message, (message) => message.chat)

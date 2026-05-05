@@ -5,17 +5,23 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  AfterLoad,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Chat } from './chat.entity';
+import { Exclude, Expose } from 'class-transformer';
 
 @Entity('messages')
 export class Message {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  @Exclude()
   @Column({ type: 'bytea' })
-  content!: Buffer; 
+  content!: Buffer;
+
+  @Expose()
+  contentBase64?: string;
 
   @Column()
   chatId!: string;
@@ -40,9 +46,13 @@ export class Message {
   @Column({ default: false })
   isRead!: boolean;
 
-  // @Column({ type: 'tsvector', nullable: true })
-  // searchVector?: any;
-
   @CreateDateColumn()
   createdAt!: Date;
+
+  @AfterLoad()
+  convertContentToBase64() {
+    if (this.content && Buffer.isBuffer(this.content)) {
+      this.contentBase64 = this.content.toString('base64');
+    }
+  }
 }

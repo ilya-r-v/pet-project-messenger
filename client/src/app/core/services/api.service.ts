@@ -34,8 +34,8 @@ export class ApiService {
         return this.http.post<Chat>(`${this.baseUrl}/chat/direct`, {targetUserId});
     }
 
-    createGroup(data: {name: string, memberIds: string[]}): Observable<Chat> {
-        return this.http.post<Chat>(`${this.baseUrl}/chat/group`, data);
+    createGroup(name: string, participants: any[]): Observable<Chat> {
+        return this.http.post<Chat>(`${this.baseUrl}/chat/group`, { name, participants });
     }
 
     getMessages(id: Chat["id"], afterId?: string): Observable<Message[]> {

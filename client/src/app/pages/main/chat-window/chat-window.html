@@ -3,7 +3,7 @@
     <span class="chat-window__name">{{ chatName }}</span>
     
     <button class="chat-window__search-btn" (click)="toggleSearch()">
-      🔍
+      
     </button>
   </div>
 
@@ -27,8 +27,8 @@
       >
         <div class="message__bubble">
 
-          @if (msg.type === 'image' || isImageKey(msg.content)) {
-            @if (imageUrls.get(getImageKey(msg.content)); as imgUrl) {
+          @if (isImage(msg)) {
+            @if (imageUrls.get(getImageKey(msg)); as imgUrl) {
               <a [href]="imgUrl" target="_blank" class="message__image-link">
                 <img
                   [src]="imgUrl"
@@ -44,7 +44,7 @@
             <p class="message__text">
               {{ getDisplayContent(msg) }}
               @if (isEncrypted(msg)) {
-                <span class="message__lock" title="Сообщение зашифровано">(зашифровано)</span>
+                <span class="message__lock" title="Сообщение зашифровано">(Сообщение зашифровано)</span>
               }
             </p>
           }

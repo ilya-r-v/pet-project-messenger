@@ -8,6 +8,7 @@ import { User } from './user/entities/user.entity';
 import { Chat } from './chat/entities/chat.entity';
 import { Message } from './chat/entities/message.entity';
 import { MinioModule } from './minio/minio.module';
+import { ChatParticipant } from './chat/entities/chat-participant.entity';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { MinioModule } from './minio/minio.module';
         username: config.get<string>('DB_USERNAME', 'ilyarodnov'),
         password: config.get<string>('DB_PASSWORD', 'L97uf13RT'),
         database: config.get<string>('DB_NAME', 'messenger'),
-        entities: [User, Chat, Message],
+        entities: [User, Chat, Message, ChatParticipant],
         synchronize: config.get<string>('NODE_ENV') !== 'production',
         logging: config.get<string>('NODE_ENV') === 'development',
       }),
