@@ -54,17 +54,23 @@ export class ChatService {
   }
 
   async createDirectChat(userId: string, targetUserId: string): Promise<Chat> {
+    const cleanTargetId = targetUserId.split(',')[0].trim();
+
+    if (cleanTargetId.length < 30) {
+       throw new NotFoundException('Некорректный ID пользователя');
+    }
+
     const existing = await this.chatRepository
       .createQueryBuilder('chat')
       .innerJoin('chat.participantObjects', 'cp1', 'cp1.userId = :userId', { userId })
-      .innerJoin('chat.participantObjects', 'cp2', 'cp2.userId = :targetUserId', { targetUserId })
+      .innerJoin('chat.participantObjects', 'cp2', 'cp2.userId = :targetUserId', { targetUserId: cleanTargetId })
       .where('chat.type = :type', { type: ChatType.DIRECT })
       .getOne();
 
     if (existing) return existing;
 
     const user = await this.userRepository.findOneBy({ id: userId });
-    const target = await this.userRepository.findOneBy({ id: targetUserId });
+    const target = await this.userRepository.findOneBy({ id: cleanTargetId });
 
     if (!user || !target) throw new NotFoundException('Пользователь не найден');
 

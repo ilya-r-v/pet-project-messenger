@@ -25,7 +25,12 @@ export class ChatListComponent implements OnInit, OnDestroy {
   @Output() chatCreated = new EventEmitter<Chat>();
 
   showForm = false;
+  isGroupMode = false;
+  
   newChatUserId = '';
+  groupName = '';
+  groupParticipants = ''; 
+  
   errorMessage = '';
   private msgSub?: Subscription;
   onlineUsers: string[] = [];
@@ -54,6 +59,7 @@ export class ChatListComponent implements OnInit, OnDestroy {
       this.onlineUsers = users;
     });
   }
+
   isOnline(chat: Chat): boolean {
     const otherParticipant = chat.participants?.find(p => p.id !== this.currentUserId);
     return otherParticipant ? this.onlineUsers.includes(otherParticipant.id) : false;
@@ -69,7 +75,10 @@ export class ChatListComponent implements OnInit, OnDestroy {
 
   toggleForm(): void {
     this.showForm = !this.showForm;
+    this.isGroupMode = false;
     this.newChatUserId = '';
+    this.groupName = '';
+    this.groupParticipants = '';
     this.errorMessage = '';
   }
 
@@ -88,37 +97,59 @@ export class ChatListComponent implements OnInit, OnDestroy {
     });
   }
 
+  async onGroupSubmit() {
+    if (!this.groupName.trim() || !this.groupParticipants.trim()) {
+      this.errorMessage = 'Заполните название и список ID';
+      return;
+    }
+
+    const ids = this.groupParticipants.split(',').map(id => id.trim()).filter(id => id.length > 0);
+    const users: User[] = ids.map(id => ({ id } as User));
+
+    if (!users.find(u => u.id === this.currentUserId)) {
+      users.push({ id: this.currentUserId } as User);
+    }
+
+    await this.createGroup(this.groupName, users);
+  }
+
+  async createGroup(name: string, selectedUsers: User[]) {
+    try {
+      const sodium = await this.cryptoService.getSodium();
+      const roomKey = await this.cryptoService.generateRoomKey();
+      const roomKeyBase64 = sodium.to_base64(roomKey);
+
+      const participantKeys = await Promise.all(selectedUsers.map(async (user) => {
+        const pubKey = await this.cryptoService.getRecipientPublicKey(user.id);
+        if (!pubKey) throw new Error(`Ключ для пользователя ${user.id} не найден`);
+        
+        const encryptedK = await this.cryptoService.encrypt(roomKeyBase64, pubKey);
+        return {
+          userId: user.id,
+          encryptedRoomKey: encryptedK
+        };
+      }));
+
+      this.chatService.createGroup(name, participantKeys).subscribe({
+        next: (chat) => {
+          this.chatCreated.emit(chat);
+          this.chatSelected.emit(chat.id);
+          this.toggleForm();
+        },
+        error: (err) => {
+          this.errorMessage = 'Не удалось создать группу на сервере';
+          console.error(err);
+        }
+      });
+    } catch (err: any) {
+      this.errorMessage = err.message || 'Ошибка при подготовке ключей';
+    }
+  }
+
   deleteChat(event: Event, chatId: string): void {
     event.stopPropagation();
     this.chatService.deleteChat(chatId).subscribe({
       next: () => this.chatDeleted.emit(chatId),
-    });
-  }
-
-  async createGroup(name: string, selectedUsers: User[]) {
-    const sodium = await this.cryptoService.getSodium();
-    const roomKey = await this.cryptoService.generateRoomKey();
-    const roomKeyBase64 = sodium.to_base64(roomKey);
-
-    const participantKeys = await Promise.all(selectedUsers.map(async (user) => {
-      const pubKey = await this.cryptoService.getRecipientPublicKey(user.id);
-      const encryptedK = await this.cryptoService.encrypt(roomKeyBase64, pubKey!);
-      return {
-        userId: user.id,
-        encryptedRoomKey: encryptedK
-      };
-    }));
-
-    this.chatService.createGroup(name, participantKeys).subscribe({
-      next: (chat) => {
-        this.chatCreated.emit(chat);
-        this.chatSelected.emit(chat.id);
-        this.toggleForm();
-      },
-      error: (err) => {
-        this.errorMessage = 'Не удалось создать группу';
-        console.error(err);
-      }
     });
   }
 

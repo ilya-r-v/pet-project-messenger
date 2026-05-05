@@ -8,16 +8,46 @@
 
   @if (showForm) {
     <div class="chat-list__form">
-      <input
-        class="chat-list__input"
-        type="text"
-        placeholder="ID пользователя"
-        [(ngModel)]="newChatUserId"
-        (keyup.enter)="createChat()"
-      />
-      <button class="chat-list__submit-btn" (click)="createChat()">
-        Создать
-      </button>
+      <div class="chat-list__mode-selector">
+        <button 
+          type="button" 
+          [class.active]="!isGroupMode" 
+          (click)="isGroupMode = false">Личный</button>
+        <button 
+          type="button" 
+          [class.active]="isGroupMode" 
+          (click)="isGroupMode = true">Группа</button>
+      </div>
+
+      @if (isGroupMode) {
+        <input
+          class="chat-list__input"
+          type="text"
+          placeholder="Название группы"
+          [(ngModel)]="groupName"
+        />
+        <input
+          class="chat-list__input"
+          type="text"
+          placeholder="ID участников (через запятую)"
+          [(ngModel)]="groupParticipants"
+        />
+        <button class="chat-list__submit-btn" (click)="onGroupSubmit()">
+          Создать группу
+        </button>
+      } @else {
+        <input
+          class="chat-list__input"
+          type="text"
+          placeholder="ID пользователя"
+          [(ngModel)]="newChatUserId"
+          (keyup.enter)="createChat()"
+        />
+        <button class="chat-list__submit-btn" (click)="createChat()">
+          Создать чат
+        </button>
+      }
+
       @if (errorMessage) {
         <p class="chat-list__error">{{ errorMessage }}</p>
       }
