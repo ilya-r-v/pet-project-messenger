@@ -26,6 +26,11 @@ export interface UserResponse {
   firstName: string;
   lastName: string;
   createdAt: string;
+  publicKey: string;
+}
+
+export interface FindOneByEmailRequest {
+  email: string;
 }
 
 export interface GetUsersBatchResponse {
@@ -113,7 +118,7 @@ export const GetUsersBatchRequest: MessageFns<GetUsersBatchRequest> = {
 };
 
 function createBaseUserResponse(): UserResponse {
-  return { id: "", email: "", firstName: "", lastName: "", createdAt: "" };
+  return { id: "", email: "", firstName: "", lastName: "", createdAt: "", publicKey: "" };
 }
 
 export const UserResponse: MessageFns<UserResponse> = {
@@ -132,6 +137,9 @@ export const UserResponse: MessageFns<UserResponse> = {
     }
     if (message.createdAt !== "") {
       writer.uint32(42).string(message.createdAt);
+    }
+    if (message.publicKey !== "") {
+      writer.uint32(50).string(message.publicKey);
     }
     return writer;
   },
@@ -181,6 +189,51 @@ export const UserResponse: MessageFns<UserResponse> = {
           }
 
           message.createdAt = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.publicKey = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseFindOneByEmailRequest(): FindOneByEmailRequest {
+  return { email: "" };
+}
+
+export const FindOneByEmailRequest: MessageFns<FindOneByEmailRequest> = {
+  encode(message: FindOneByEmailRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.email !== "") {
+      writer.uint32(10).string(message.email);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): FindOneByEmailRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseFindOneByEmailRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.email = reader.string();
           continue;
         }
       }
@@ -270,6 +323,8 @@ export const UserExistsResponse: MessageFns<UserExistsResponse> = {
 export interface UserServiceClient {
   getUser(request: GetUserRequest): Observable<UserResponse>;
 
+  findOneByEmail(request: FindOneByEmailRequest): Observable<UserResponse>;
+
   getUsersBatch(request: GetUsersBatchRequest): Observable<GetUsersBatchResponse>;
 
   userExists(request: GetUserRequest): Observable<UserExistsResponse>;
@@ -277,6 +332,8 @@ export interface UserServiceClient {
 
 export interface UserServiceController {
   getUser(request: GetUserRequest): Promise<UserResponse> | Observable<UserResponse> | UserResponse;
+
+  findOneByEmail(request: FindOneByEmailRequest): Promise<UserResponse> | Observable<UserResponse> | UserResponse;
 
   getUsersBatch(
     request: GetUsersBatchRequest,
@@ -289,7 +346,7 @@ export interface UserServiceController {
 
 export function UserServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["getUser", "getUsersBatch", "userExists"];
+    const grpcMethods: string[] = ["getUser", "findOneByEmail", "getUsersBatch", "userExists"];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("UserService", method)(constructor.prototype[method], method, descriptor);
@@ -312,6 +369,16 @@ export const UserServiceService = {
     responseStream: false as const,
     requestSerialize: (value: GetUserRequest): Buffer => Buffer.from(GetUserRequest.encode(value).finish()),
     requestDeserialize: (value: Buffer): GetUserRequest => GetUserRequest.decode(value),
+    responseSerialize: (value: UserResponse): Buffer => Buffer.from(UserResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): UserResponse => UserResponse.decode(value),
+  },
+  findOneByEmail: {
+    path: "/user.UserService/FindOneByEmail" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: FindOneByEmailRequest): Buffer =>
+      Buffer.from(FindOneByEmailRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): FindOneByEmailRequest => FindOneByEmailRequest.decode(value),
     responseSerialize: (value: UserResponse): Buffer => Buffer.from(UserResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): UserResponse => UserResponse.decode(value),
   },
@@ -338,6 +405,7 @@ export const UserServiceService = {
 
 export interface UserServiceServer extends UntypedServiceImplementation {
   getUser: handleUnaryCall<GetUserRequest, UserResponse>;
+  findOneByEmail: handleUnaryCall<FindOneByEmailRequest, UserResponse>;
   getUsersBatch: handleUnaryCall<GetUsersBatchRequest, GetUsersBatchResponse>;
   userExists: handleUnaryCall<GetUserRequest, UserExistsResponse>;
 }

@@ -44,6 +44,10 @@ export class ChatService {
         return this.apiService.createDirect(targetUserId);
     }
 
+    createDirectByEmail(email: string): Observable<Chat> {
+        return this.apiService.createDirectByEmail(email);
+    }
+
     createGroup(name: string, participants: { userId: string, encryptedRoomKey: string }[]): Observable<Chat> {
         return this.apiService.createGroup(name, participants).pipe(
             tap(newChat => {

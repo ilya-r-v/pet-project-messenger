@@ -25,12 +25,12 @@ export class ChatService {
   ) {}
 
   async getUserChats(userId: string): Promise<Chat[]> {
-    return this.chatRepository
+    const chats = await this.chatRepository
       .createQueryBuilder('chat')
       .innerJoin('chat.participantObjects', 'cp', 'cp.userId = :userId', { userId })
       .leftJoinAndSelect('chat.participantObjects', 'allCp')
       .leftJoinAndSelect('allCp.user', 'allParticipants') 
-      .leftJoinAndSelect('chat.messages', 'lastMessage')
+      .leftJoinAndSelect('chat.messages', 'lastMessage') 
       .andWhere((qb) => {
         const subQuery = qb
           .subQuery()
@@ -51,6 +51,19 @@ export class ChatService {
       )
       .orderBy('lastMessage.createdAt', 'DESC')
       .getMany();
+
+    return chats.map(chat => {
+      const msg = chat.messages && chat.messages.length > 0 ? chat.messages[0] : null;
+      
+      if (msg) {
+        (msg as any).content = msg.content ? Buffer.from(msg.content as any).toString('base64') : '';
+      }
+
+      return {
+        ...chat,
+        lastMessage: msg
+      };
+    });
   }
 
   async createDirectChat(userId: string, targetUserId: string): Promise<Chat> {
@@ -194,18 +207,19 @@ export class ChatService {
     });
   }
   
-  // async searchMessages(chatId: string, query: string) {
-  //   if (!query || query.trim().length === 0) return [];
+  async createDirectByEmail(myId: string, targetEmail: string): Promise<Chat> {
+    try {
+      const targetUser = await this.userGrpcClient.findOneByEmail(targetEmail);
 
-  //   return this.messageRepository
-  //     .createQueryBuilder('message')
-  //     .leftJoinAndSelect('message.sender', 'sender')
-  //     .where('message.chatId = :chatId', { chatId })
-  //     .andWhere('message.content ILIKE :query', { query: `%${query}%` }) 
-  //     .orderBy('message.createdAt', 'DESC')
-  //     .limit(50)
-  //     .getMany();
-  // }
+      if (!targetUser || !targetUser.id) {
+        throw new NotFoundException('Пользователь с таким email не найден');
+      }
+
+      return this.createDirectChat(myId, targetUser.id);
+    } catch (err) {
+      throw new NotFoundException('Пользователь не найден или ошибка связи с сервисом');
+    }
+  }
 
   async searchMessages(chatId: string, query: string) {
     console.warn(`[E2EE] Поиск по контенту отключен для чата ${chatId}`);

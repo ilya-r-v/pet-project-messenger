@@ -47,6 +47,15 @@ export class ChatController {
     return this.chatService.createGroupChat(body.name, body.participants);
   }
 
+  @Post('direct-by-email')
+  @ApiOperation({ summary: 'Создать чат по email пользователя' })
+  createByEmail(
+    @Request() req: { user: { id: string } },
+    @Body() body: { email: string },
+  ) {
+    return this.chatService.createDirectByEmail(req.user.id, body.email);
+  }
+
   @Get('search')
   async search(
     @Query('chatId') chatId: string,

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, SimpleChanges, OnChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { Chat } from '../../../models/chat.model';
@@ -15,8 +15,12 @@ import { CryptoService } from '../../../core/services/crypto.service';
   templateUrl: './chat-list.html',
   styleUrls: ['./chat-list.scss'],
 })
-export class ChatListComponent implements OnInit, OnDestroy {
+export class ChatListComponent implements OnInit, OnDestroy, OnChanges {
   @Input() chats: Chat[] = [];
+  decryptedPreviews = new Map<string, string>();
+
+  
+
   @Input() activeChatId: string | null = null;
   @Input() currentUserId: string = '';
   
@@ -41,23 +45,72 @@ export class ChatListComponent implements OnInit, OnDestroy {
     private cryptoService: CryptoService
   ) {}
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['chats'] && this.chats) {
+      this.decryptAllPreviews();
+    }
+  }
+
   ngOnInit(): void {
-    this.msgSub = this.socketService.onMessage().subscribe(msg => {
+    this.msgSub = this.socketService.onMessage().subscribe(async msg => {
       const chat = this.chats.find(c => c.id === msg.chatId);
       if (chat) {
         chat.lastMessage = msg;
+        
+        await this.decryptPreview(chat);
+
         if (chat.id !== this.activeChatId) {
           chat.unreadCount = (chat.unreadCount || 0) + 1;
         }
-        this.chats = [
-          chat,
-          ...this.chats.filter(c => c.id !== msg.chatId)
-        ];
+        
+        this.chats = [chat, ...this.chats.filter(c => c.id !== msg.chatId)];
       }
     });
+
     this.socketService.onlineUsers$.subscribe(users => {
       this.onlineUsers = users;
     });
+  }
+
+  private async decryptAllPreviews() {
+    for (const chat of this.chats) {
+      await this.decryptPreview(chat);
+    }
+  }
+
+  private async decryptPreview(chat: Chat): Promise<void> {
+    const msg = chat.lastMessage;
+    if (!msg || !msg.content) return;
+    
+    if (msg.content.startsWith('[e2ee]:')) {
+      try {
+        const privKey = await this.cryptoService.loadPrivateKey();
+        if (privKey) {
+          const decrypted = await this.cryptoService.decrypt(msg.content, privKey);
+          this.decryptedPreviews.set(chat.id, decrypted);
+          return;
+        }
+      } catch (e) {
+        this.decryptedPreviews.set(chat.id, '🔒 Зашифровано');
+        return;
+      }
+    }
+
+    try {
+      const cleanBase64 = msg.content.replace('[e2ee]:', '');
+      const decoded = decodeURIComponent(atob(cleanBase64));
+      this.decryptedPreviews.set(chat.id, decoded);
+    } catch {
+      this.decryptedPreviews.set(chat.id, msg.content);
+    }
+  }
+
+  getPreviewText(chat: Chat): string {
+    if (!chat.lastMessage) return 'Нет сообщений';
+    const decrypted = this.decryptedPreviews.get(chat.id);
+    
+    if (decrypted?.startsWith('[image]:')) return '📷 Фотография';
+    return decrypted || 'Расшифровка...';
   }
 
   isOnline(chat: Chat): boolean {
@@ -85,16 +138,38 @@ export class ChatListComponent implements OnInit, OnDestroy {
   createChat(): void {
     if (!this.newChatUserId.trim()) return;
 
-    this.chatService.createDirect(this.newChatUserId.trim()).subscribe({
+    const email = this.newChatUserId.trim();
+
+    this.chatService.createDirectByEmail(email).subscribe({
       next: (chat) => {
         this.chatCreated.emit(chat);
         this.chatSelected.emit(chat.id);
         this.toggleForm();
       },
-      error: () => {
-        this.errorMessage = 'Пользователь не найден';
+      error: (err) => {
+        this.errorMessage = err.error?.message || 'Пользователь не найден';
       },
     });
+  }
+
+  private async decryptLastMessages() {
+    const privKey = await this.cryptoService.loadPrivateKey();
+    if (!privKey) return;
+
+    for (const chat of this.chats) {
+      if (chat.lastMessage && chat.lastMessage.content?.startsWith('[e2ee]:')) {
+        try {
+          const decrypted = await this.cryptoService.decrypt(
+            chat.lastMessage.content, 
+            privKey
+          );
+          chat.lastMessage.content = decrypted;
+        } catch (e) {
+          console.error(`[ChatList] Ошибка расшифровки чата ${chat.id}:`, e);
+          chat.lastMessage.content = '🔒 Ошибка расшифровки';
+        }
+      }
+    }
   }
 
   async onGroupSubmit() {

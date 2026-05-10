@@ -8,6 +8,7 @@ import {
   GetUserRequest,
   GetUsersBatchRequest,
   UserResponse,
+  FindOneByEmailRequest,
 } from './generated/user';
 
 @Injectable()
@@ -33,6 +34,12 @@ export class UserGrpcClient implements OnModuleInit {
       this.userService.getUsersBatch({ ids })
     );
     return response.users;
+  }
+
+  async findOneByEmail(email: string): Promise<UserResponse> {
+    return firstValueFrom(
+      this.userService.findOneByEmail({ email })
+    );
   }
 
   async userExists(id: string): Promise<boolean> {

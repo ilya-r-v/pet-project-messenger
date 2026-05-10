@@ -38,6 +38,10 @@ export class ApiService {
         return this.http.post<Chat>(`${this.baseUrl}/chat/group`, { name, participants });
     }
 
+    createDirectByEmail(email: string): Observable<Chat> {
+        return this.http.post<Chat>(`${this.baseUrl}/chat/direct-by-email`, { email });
+    }
+
     getMessages(id: Chat["id"], afterId?: string): Observable<Message[]> {
         let params = new HttpParams();
         if (afterId) params = params.set('afterId', afterId);

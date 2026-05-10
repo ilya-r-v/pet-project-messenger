@@ -5,6 +5,8 @@ package user;
 service UserService {
   rpc GetUser(GetUserRequest) returns (UserResponse);
 
+  rpc FindOneByEmail(FindOneByEmailRequest) returns (UserResponse);
+
   rpc GetUsersBatch(GetUsersBatchRequest) returns (GetUsersBatchResponse);
 
   rpc UserExists(GetUserRequest) returns (UserExistsResponse);
@@ -25,6 +27,11 @@ message UserResponse {
   string first_name = 3;
   string last_name = 4;
   string created_at = 5;
+  string public_key = 6;
+}
+
+message FindOneByEmailRequest {
+  string email = 1;
 }
 
 message GetUsersBatchResponse {
