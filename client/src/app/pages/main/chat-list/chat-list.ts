@@ -114,8 +114,22 @@ export class ChatListComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   isOnline(chat: Chat): boolean {
-    const otherParticipant = chat.participants?.find(p => p.id !== this.currentUserId);
-    return otherParticipant ? this.onlineUsers.includes(otherParticipant.id) : false;
+    const participants = (chat as any).participantObjects;
+    
+    if (!participants || !Array.isArray(participants) || participants.length === 0) {
+      return false;
+    }
+
+    const otherParticipant = participants.find((p: any) => 
+      p.userId && this.currentUserId && p.userId.toLowerCase() !== this.currentUserId.toLowerCase()
+    );
+
+    if (!otherParticipant || !otherParticipant.userId) {
+      return false;
+    }
+
+    const targetId = otherParticipant.userId.toLowerCase();
+    return this.onlineUsers.some(onlineUserId => onlineUserId.toLowerCase() === targetId);
   }
 
   selectChat(chatId: string): void {
